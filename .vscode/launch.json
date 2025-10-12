@@ -1,0 +1,76 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Start Expo (Auto-detect Platform)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/expo/bin/cli",
+      "args": ["start"],
+      "console": "integratedTerminal",
+      "outFiles": ["${workspaceFolder}/.expo/**/*.js"],
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Debug in Expo Go (Android)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/expo/bin/cli",
+      "args": ["start", "--android"],
+      "console": "integratedTerminal",
+      "outFiles": ["${workspaceFolder}/.expo/**/*.js"],
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Debug in Expo Go (iOS)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/expo/bin/cli",
+      "args": ["start", "--ios"],
+      "console": "integratedTerminal",
+      "outFiles": ["${workspaceFolder}/.expo/**/*.js"],
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Debug Web",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/expo/bin/cli",
+      "args": ["start", "--web"],
+      "console": "integratedTerminal",
+      "outFiles": ["${workspaceFolder}/.expo/**/*.js"],
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Attach to Metro",
+      "type": "node",
+      "request": "attach",
+      "port": 8081,
+      "address": "localhost",
+      "localRoot": "${workspaceFolder}",
+      "remoteRoot": null,
+      "skipFiles": ["<node_internals>/**"],
+      "outFiles": ["${workspaceFolder}/.expo/**/*.js"]
+    },
+    {
+      "name": "Debug Expo Development Build (Android)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/expo/bin/cli",
+      "args": ["run:android", "--variant", "debug"],
+      "console": "integratedTerminal",
+      "outFiles": ["${workspaceFolder}/.expo/**/*.js"],
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Debug Expo Development Build (iOS)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/expo/bin/cli",
+      "args": ["run:ios", "--configuration", "Debug"],
+      "console": "integratedTerminal",
+      "outFiles": ["${workspaceFolder}/.expo/**/*.js"],
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}

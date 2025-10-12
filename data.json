@@ -1,0 +1,10 @@
+[
+  {
+    "createdAt": "2025-09-19T14:15:04.390Z",
+    "id": "71f0c093-ffc6-4c3d-a442-5d99b81af0ed",
+    "note": "Order created",
+    "orderId": "00e0378b-873d-4695-bc70-f29b2aff4e3f",
+    "status": "picked_up",
+    "updatedAt": "2025-09-19T14:15:04.390Z"
+  }
+]
