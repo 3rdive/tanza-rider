@@ -86,7 +86,7 @@ const SpotifyCreateAccount = () => {
 
   const handleBack = () => {
     console.log("Go back");
-    router.back();
+    router.replace("/(auth)");
   };
 
   return (

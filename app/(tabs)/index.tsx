@@ -1,10 +1,8 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  Image,
   ScrollView,
   Clipboard,
   Alert,
@@ -19,24 +17,24 @@ import MapView, {
   PROVIDER_DEFAULT,
   UrlTile,
 } from "react-native-maps";
-import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import ReviewBottomSheet from "../../components/review-bottom-sheet";
 import DocumentStatusBanner from "../../components/DocumentStatusBanner";
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "../../redux/store";
-import { setOnlineStatus } from "../../redux/slices/deliveryRequestSlice";
+import LocationSummaryCard from "../../components/home/LocationSummaryCard";
+import ActiveDeliveryCard from "../../components/home/ActiveDeliveryCard";
 import { useRouter } from "expo-router";
 import { useRider } from "../../hooks/rider.hook";
+import { useRiderActiveStatus } from "@/hooks/useRiderActiveStatus";
+import { useActiveOrders } from "@/hooks/useActiveOrders";
+import { orderService, OrderTrackingStatus } from "@/lib/api";
+import { useDeviceLocation } from "@/hooks/location.hook";
 
 export default function HomeScreen() {
-  const [status, setStatus] = useState("Accepted");
+  const [status, setStatus] = useState<OrderTrackingStatus>("accepted");
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
   // const [isActive, setIsActive] = useState(true);
-  const [isExpanded, setIsExpanded] = useState(true);
-
-  // Animation values - initialize with expanded state (1)
-  const animatedHeight = useRef(new Animated.Value(1)).current;
-  const animatedOpacity = useRef(new Animated.Value(1)).current;
-  const animatedRotation = useRef(new Animated.Value(1)).current; // 1 = expanded (rotated)
+  // Bottom sheet header animation controls
   // Header animation: 0 = visible, 1 = hidden
   const headerAnim = useRef(new Animated.Value(0)).current;
   const headerTranslate = headerAnim.interpolate({
@@ -57,48 +55,23 @@ export default function HomeScreen() {
     outputRange: ["rgba(240,240,240,1)", "rgba(240,240,240,0)"],
   });
 
-  const dispatch = useDispatch();
-  const { isOnline } = useSelector((state: RootState) => state.deliveryRequest);
-  const { loading, error, documentStatus, rejectionReason, fetchRider } =
-    useRider();
+  const { isActive, setActive } = useRiderActiveStatus();
+  const { loading, documentStatus, rejectionReason, fetchRider } = useRider();
+  const {
+    activeOrders,
+    loading: ordersLoading,
+    error: ordersError,
+    refetch: refetchOrders,
+  } = useActiveOrders();
+  const { latitude, longitude } = useDeviceLocation();
   const [headerHidden, setHeaderHidden] = useState(false);
   const router = useRouter();
 
   const handleToggleOnline = (value: boolean) => {
-    dispatch(setOnlineStatus(value));
+    setActive(value);
   };
 
-  const toggleExpanded = () => {
-    // Update state first
-    setIsExpanded(!isExpanded);
-
-    // Calculate target values based on NEW state (after toggle)
-    const newExpandedState = !isExpanded;
-    const targetHeight = newExpandedState ? 1 : 0;
-    const targetOpacity = newExpandedState ? 1 : 0;
-    const targetRotation = newExpandedState ? 1 : 0;
-
-    // Parallel animations for smooth transition
-    Animated.parallel([
-      Animated.timing(animatedHeight, {
-        toValue: targetHeight,
-        duration: 250,
-        useNativeDriver: false,
-      }),
-      Animated.timing(animatedOpacity, {
-        toValue: targetOpacity,
-        duration: 150,
-        useNativeDriver: false,
-      }),
-      Animated.timing(animatedRotation, {
-        toValue: targetRotation,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
-  const hideHeader = () => {
+  const hideHeader = useCallback(() => {
     setHeaderHidden(true);
     // smooth hide with easing
     Animated.timing(headerAnim, {
@@ -107,9 +80,9 @@ export default function HomeScreen() {
       easing: Easing.inOut(Easing.ease),
       useNativeDriver: false,
     }).start();
-  };
+  }, [headerAnim]);
 
-  const showHeader = () => {
+  const showHeader = useCallback(() => {
     setHeaderHidden(false);
     // smooth show with easing
     Animated.timing(headerAnim, {
@@ -118,7 +91,7 @@ export default function HomeScreen() {
       easing: Easing.inOut(Easing.ease),
       useNativeDriver: false,
     }).start();
-  };
+  }, [headerAnim]);
 
   // Debounced region-change handler (fires while map is moving)
   const regionChangeTimeout = useRef<number | null>(null);
@@ -147,11 +120,11 @@ export default function HomeScreen() {
   }, []);
 
   const statuses = [
-    { label: "Pending", color: "orange" },
-    { label: "Accepted", color: "#007bff" },
-    { label: "Picked Up", color: "#ff9500" },
-    { label: "In-Transit", color: "#00aa66" },
-    { label: "Delivered", color: "#9c27b0" },
+    { label: "pending", color: "#FFA500" },
+    { label: "accepted", color: "#007bff" },
+    { label: "picked_up", color: "#ff9500" },
+    { label: "transit", color: "#2196F3" },
+    { label: "delivered", color: "#9c27b0" },
   ];
 
   const handleCopy = (text: string) => {
@@ -172,11 +145,6 @@ export default function HomeScreen() {
     Alert.alert("Thanks", "Your review has been submitted");
   };
 
-  // Fetch rider on mount
-  useEffect(() => {
-    fetchRider();
-  }, [fetchRider]);
-
   // Navigate to document/profile if INITIAL
   useEffect(() => {
     if (documentStatus === "INITIAL") {
@@ -185,24 +153,140 @@ export default function HomeScreen() {
     }
   }, [documentStatus, router]);
 
-  const nextStatus = () => {
-    const currentIndex = statuses.findIndex((s) => s.label === status);
+  const nextStatus = async () => {
+    if (!currentActiveOrder) {
+      Alert.alert("Error", "No active order to update");
+      return;
+    }
+
+    const currentIndex = statuses.findIndex((s) => s.label === currentStatus);
     if (currentIndex < statuses.length - 1) {
-      setStatus(statuses[currentIndex + 1].label);
+      const newStatus = statuses[currentIndex + 1].label as OrderTrackingStatus;
+
+      try {
+        setUpdatingStatus(true);
+        // Call API to update order tracking
+        await orderService.track({
+          orderId: currentActiveOrder.orderId,
+          status: newStatus,
+        });
+
+        // Update local state
+        setStatus(newStatus);
+
+        // Refetch active orders to get updated data
+        await refetchOrders();
+
+        // Vibrate on success
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success
+        );
+
+        Alert.alert(
+          "Success",
+          `Order status updated to ${newStatus.replace("_", " ")}`
+        );
+      } catch (error: any) {
+        console.error("Error updating order status:", error);
+        Alert.alert(
+          "Error",
+          error?.response?.data?.message || "Failed to update order status"
+        );
+      } finally {
+        setUpdatingStatus(false);
+      }
     }
   };
 
-  interface Status {
-    label: string;
-    color: string;
-  }
+  // Status type kept local to component usage
 
-  const getColorForStatus = (s: string, index: number): string => {
-    const currentIndex = statuses.findIndex(
-      (st: Status) => st.label === status
-    );
-    return index <= currentIndex ? statuses[index].color : "#ddd";
-  };
+  // Get the first active order (if any)
+  const currentActiveOrder = activeOrders.length > 0 ? activeOrders[0] : null;
+
+  // Determine current status from active order
+  const currentStatus = currentActiveOrder
+    ? currentActiveOrder.orderTracking.length > 0
+      ? currentActiveOrder.orderTracking[
+          currentActiveOrder.orderTracking.length - 1
+        ].status
+      : "pending"
+    : status;
+
+  // Map coordinates from active order
+  const pickupCoords = currentActiveOrder
+    ? {
+        latitude: parseFloat(currentActiveOrder.pickUpLocation.latitude),
+        longitude: parseFloat(currentActiveOrder.pickUpLocation.longitude),
+      }
+    : { latitude: 37.78825, longitude: -122.4324 };
+
+  const dropoffCoords = currentActiveOrder
+    ? {
+        latitude: parseFloat(currentActiveOrder.dropOffLocation.latitude),
+        longitude: parseFloat(currentActiveOrder.dropOffLocation.longitude),
+      }
+    : { latitude: 37.75825, longitude: -122.4524 };
+
+  // Calculate map region to fit both markers
+  const mapRegion = React.useMemo(() => {
+    // If no active order, center on rider location
+    if (!currentActiveOrder && latitude !== null && longitude !== null) {
+      return {
+        latitude,
+        longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+    }
+
+    const latDelta = Math.abs(pickupCoords.latitude - dropoffCoords.latitude);
+    const lonDelta = Math.abs(pickupCoords.longitude - dropoffCoords.longitude);
+
+    // Add padding (1.5x the delta or minimum 0.02)
+    const latitudeDelta = Math.max(latDelta * 1.5, 0.02);
+    const longitudeDelta = Math.max(lonDelta * 1.5, 0.02);
+
+    // Center between the two points
+    const centerLat = (pickupCoords.latitude + dropoffCoords.latitude) / 2;
+    const centerLon = (pickupCoords.longitude + dropoffCoords.longitude) / 2;
+
+    return {
+      latitude: centerLat,
+      longitude: centerLon,
+      latitudeDelta,
+      longitudeDelta,
+    };
+  }, [
+    currentActiveOrder,
+    latitude,
+    longitude,
+    pickupCoords.latitude,
+    pickupCoords.longitude,
+    dropoffCoords.latitude,
+    dropoffCoords.longitude,
+  ]);
+
+  // Pulsing animation for rider marker when no active order
+  useEffect(() => {
+    if (!currentActiveOrder && latitude !== null && longitude !== null) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.3,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    }
+  }, [currentActiveOrder, latitude, longitude, pulseAnim]);
 
   return (
     <View style={styles.container}>
@@ -227,16 +311,16 @@ export default function HomeScreen() {
           <Text
             style={[
               styles.statusText,
-              { color: isOnline ? "#00AA66" : "#999" },
+              { color: isActive ? "#00AA66" : "#999" },
             ]}
           >
-            {isOnline ? "Active" : "Inactive"}
+            {isActive ? "Active" : "Inactive"}
           </Text>
           <Switch
-            value={isOnline}
+            value={isActive}
             onValueChange={handleToggleOnline}
             trackColor={{ false: "#E5E5E5", true: "#C8E6C9" }}
-            thumbColor={isOnline ? "#00AA66" : "#f4f3f4"}
+            thumbColor={isActive ? "#00AA66" : "#f4f3f4"}
             ios_backgroundColor="#E5E5E5"
           />
         </View>
@@ -246,12 +330,7 @@ export default function HomeScreen() {
       <MapView
         style={styles.map}
         provider={PROVIDER_DEFAULT}
-        initialRegion={{
-          latitude: 37.78825,
-          longitude: -122.4324,
-          latitudeDelta: 0.04,
-          longitudeDelta: 0.05,
-        }}
+        region={mapRegion}
         onPanDrag={hideHeader}
         onRegionChange={handleRegionChange}
         onRegionChangeComplete={showHeader}
@@ -261,41 +340,60 @@ export default function HomeScreen() {
           maximumZ={19}
           zIndex={0}
         />
-        <Marker
-          coordinate={{ latitude: 37.78825, longitude: -122.4324 }}
-          title="Pickup"
-          pinColor="green"
-        />
-        <Marker
-          coordinate={{ latitude: 37.75825, longitude: -122.4524 }}
-          title="Drop-off"
-          pinColor="red"
-        />
-        <Polyline
-          coordinates={[
-            { latitude: 37.78825, longitude: -122.4324 },
-            { latitude: 37.75825, longitude: -122.4524 },
-          ]}
-          strokeColor="#00AA66"
-          strokeWidth={4}
-        />
+
+        {/* Show rider location when no active order */}
+        {!currentActiveOrder && latitude !== null && longitude !== null && (
+          <Marker coordinate={{ latitude, longitude }} title="Your Location">
+            <Animated.View
+              style={{
+                transform: [{ scale: pulseAnim }],
+              }}
+            >
+              <View
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: 10,
+                  backgroundColor: "#f58686ff",
+                  borderWidth: 3,
+                  borderColor: "#fff",
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 3,
+                }}
+              />
+            </Animated.View>
+          </Marker>
+        )}
+
+        {/* Show pickup/dropoff when there's an active order */}
+        {currentActiveOrder && (
+          <>
+            <Marker coordinate={pickupCoords} title="Pickup" pinColor="green" />
+            <Marker
+              coordinate={dropoffCoords}
+              title="Drop-off"
+              pinColor="red"
+            />
+            <Polyline
+              coordinates={[pickupCoords, dropoffCoords]}
+              strokeColor="#00AA66"
+              strokeWidth={4}
+            />
+          </>
+        )}
       </MapView>
 
       {/* Pickup & Dropoff Card */}
-      <View style={styles.topCard}>
-        <View style={styles.locationRow}>
-          <Ionicons name="location" size={18} color="#00AA66" />
-          <Text style={styles.locationText}>
-            Pickup: 21 King St, San Francisco
-          </Text>
-        </View>
-        <View style={styles.locationRow}>
-          <Ionicons name="flag" size={18} color="#FF4C4C" />
-          <Text style={styles.locationText}>
-            Drop-off: 42 Market St, San Francisco
-          </Text>
-        </View>
-      </View>
+      {currentActiveOrder && (
+        <LocationSummaryCard
+          pickupText={currentActiveOrder?.pickUpLocation.address || "pick_up"}
+          dropoffText={
+            currentActiveOrder?.dropOffLocation.address || "drop_off"
+          }
+        />
+      )}
 
       {/* Bottom Sheet */}
       <View style={styles.sheet}>
@@ -303,8 +401,11 @@ export default function HomeScreen() {
         <ScrollView
           refreshControl={
             <RefreshControl
-              refreshing={!!loading}
-              onRefresh={() => fetchRider()}
+              refreshing={!!loading || ordersLoading}
+              onRefresh={() => {
+                fetchRider();
+                refetchOrders();
+              }}
             />
           }
         >
@@ -314,165 +415,17 @@ export default function HomeScreen() {
             rejectionReason={rejectionReason}
           />
 
-          <View style={styles.deliveryCard}>
-            {/* Collapsible Header */}
-            <TouchableOpacity
-              style={styles.deliveryHeader}
-              onPress={toggleExpanded}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.heading}>Active Delivery</Text>
-              <Animated.View
-                style={{
-                  transform: [
-                    {
-                      rotate: animatedRotation.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: ["0deg", "180deg"],
-                      }),
-                    },
-                  ],
-                }}
-              >
-                <Ionicons name="chevron-down" size={24} color="#666" />
-              </Animated.View>
-            </TouchableOpacity>
-
-            {/* Collapsible Content */}
-            <Animated.View
-              style={[
-                styles.deliveryContent,
-                {
-                  maxHeight: animatedHeight.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, 1000], // Adjust based on your content height
-                  }),
-                  opacity: animatedOpacity,
-                  overflow: "hidden",
-                },
-              ]}
-            >
-              {/* Show skeleton or error at top of content */}
-              {loading && (
-                <View style={{ paddingVertical: 12 }}>
-                  <View
-                    style={{
-                      height: 12,
-                      backgroundColor: "#eaeaea",
-                      borderRadius: 6,
-                      marginBottom: 8,
-                    }}
-                  />
-                  <View
-                    style={{
-                      height: 12,
-                      backgroundColor: "#eaeaea",
-                      borderRadius: 6,
-                      marginBottom: 8,
-                      width: "70%",
-                    }}
-                  />
-                </View>
-              )}
-              {error && (
-                <View style={{ paddingVertical: 12 }}>
-                  <Text style={{ color: "#d9534f", marginBottom: 8 }}>
-                    Failed to load rider info.
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.pastBtn}
-                    onPress={() => fetchRider()}
-                  >
-                    <Text style={styles.pastBtnText}>Retry</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              {/* Customer Info */}
-              <View style={styles.row}>
-                <Image
-                  source={{
-                    uri: "https://avatar.iran.liara.run/public/34",
-                  }}
-                  style={styles.avatar}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.name}>John Doe</Text>
-                  <View style={styles.phoneRow}>
-                    <Text style={styles.contact}>+1 (555) 123-4567</Text>
-                    <TouchableOpacity
-                      onPress={() => handleCopy("+1 (555) 123-4567")}
-                    >
-                      <Ionicons name="copy-outline" size={18} color="#00AA66" />
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={styles.packageInfo}>
-                    Medium Package • Fragile
-                  </Text>
-                </View>
-              </View>
-
-              {/* Delivery Stats */}
-              <View style={styles.infoRow}>
-                <View style={styles.infoBox}>
-                  <Text style={styles.infoLabel}>Distance</Text>
-                  <Text style={styles.infoValue}>8.4 km</Text>
-                </View>
-                <View style={styles.infoBox}>
-                  <Text style={styles.infoLabel}>Earnings</Text>
-                  <Text style={styles.infoValue}>$16.20</Text>
-                </View>
-                <View style={styles.infoBox}>
-                  <Text style={styles.infoLabel}>Est. Time</Text>
-                  <Text style={styles.infoValue}>15 mins</Text>
-                </View>
-              </View>
-
-              {/* Status Flow with Connecting Lines */}
-              <View style={styles.statusFlow}>
-                {statuses.map((s, i) => (
-                  <View key={s.label} style={styles.statusItem}>
-                    <View
-                      style={[
-                        styles.statusDot,
-                        { backgroundColor: getColorForStatus(s.label, i) },
-                      ]}
-                    />
-                    {i < statuses.length - 1 && (
-                      <View
-                        style={[
-                          styles.connector,
-                          { backgroundColor: getColorForStatus(s.label, i) },
-                        ]}
-                      />
-                    )}
-                    <Text
-                      style={[
-                        styles.statusLabel,
-                        { color: getColorForStatus(s.label, i) },
-                      ]}
-                    >
-                      {s.label}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* Next Step */}
-              {status !== "Delivered" && (
-                <TouchableOpacity style={styles.actionBtn} onPress={nextStatus}>
-                  <Text style={styles.actionText}>
-                    {status === "Accepted"
-                      ? "Mark as Picked Up"
-                      : status === "Picked Up"
-                      ? "Mark as In-Transit"
-                      : status === "In-Transit"
-                      ? "Mark as Delivered"
-                      : "Next"}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </Animated.View>
-          </View>
+          <ActiveDeliveryCard
+            status={currentStatus}
+            statuses={statuses}
+            onNextStatus={nextStatus}
+            loading={ordersLoading}
+            error={!!ordersError}
+            onRetry={refetchOrders}
+            onCopy={handleCopy}
+            activeOrder={currentActiveOrder}
+            updatingStatus={updatingStatus}
+          />
         </ScrollView>
       </View>
       <ReviewBottomSheet
@@ -532,25 +485,6 @@ const styles = StyleSheet.create({
   },
 
   map: { flex: 1 },
-  topCard: {
-    position: "absolute",
-    top: 120,
-    alignSelf: "center",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 8,
-    width: "90%",
-  },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 2,
-  },
-  locationText: { marginLeft: 6, fontSize: 13, color: "#333" },
   sheet: {
     position: "absolute",
     bottom: 0,
@@ -570,79 +504,5 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 10,
   },
-  heading: { fontSize: 18, fontWeight: "600", marginBottom: 0 },
-  deliveryCard: {
-    backgroundColor: "#f3f7f5",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 20,
-  },
-  deliveryHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingBottom: 10,
-  },
-  deliveryContent: {
-    paddingTop: 10,
-  },
-  row: { flexDirection: "row", alignItems: "center" },
-  avatar: { width: 50, height: 50, borderRadius: 25, marginRight: 10 },
-  name: { fontWeight: "700", fontSize: 16 },
-  phoneRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 2,
-  },
-  contact: { color: "#007b55" },
-  packageInfo: { color: "#555", marginTop: 4 },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 16,
-  },
-  infoBox: { alignItems: "center", flex: 1 },
-  infoLabel: { fontSize: 12, color: "#777" },
-  infoValue: { fontSize: 15, fontWeight: "600", color: "#222", marginTop: 2 },
-
-  /* Status Flow */
-  statusFlow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 25,
-    position: "relative",
-  },
-  statusItem: { alignItems: "center", flex: 1, position: "relative" },
-  statusDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    zIndex: 2,
-  },
-  connector: {
-    position: "absolute",
-    top: 6,
-    right: "-50%",
-    width: "100%",
-    height: 2,
-    zIndex: 1,
-  },
-  statusLabel: { fontSize: 10, marginTop: 6 },
-  actionBtn: {
-    backgroundColor: "#00AA66",
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 20,
-  },
-  actionText: { color: "#fff", fontWeight: "600", fontSize: 15 },
-  pastBtn: {
-    backgroundColor: "#e9f5f0",
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  pastBtnText: { color: "#00AA66", fontWeight: "600" },
+  // extraneous styles moved into extracted components
 });

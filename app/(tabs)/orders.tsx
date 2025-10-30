@@ -1,49 +1,226 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
+  FlatList,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { useOrders, OrderTab } from "@/hooks/useOrders";
+import { IOrderHistoryItem, orderService } from "@/lib/api";
+import { useAlert } from "@/hooks/useAlert";
+import { tzColors } from "@/theme/color";
+import { useRouter } from "expo-router";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 
 export default function HistoryScreen() {
-  const [activeTab, setActiveTab] = useState("Upcoming");
+  const router = useRouter();
+  const alert = useAlert();
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const {
+    orders,
+    loading,
+    refreshing,
+    loadingMore,
+    activeTab,
+    currentPage,
+    totalPages,
+    onRefresh,
+    loadMore,
+    changeTab,
+  } = useOrders();
 
-  const deliveries = [
-    {
-      id: 1,
-      pickup: "21 King St, San Francisco",
-      dropoff: "42 Market St, San Francisco",
-      distance: "8.2 km",
-      price: "$15.50",
-    },
-    {
-      id: 2,
-      pickup: "101 Pine Ave, Oakland",
-      dropoff: "23 Bay Rd, Berkeley",
-      distance: "12.5 km",
-      price: "$22.00",
-    },
-    {
-      id: 3,
-      pickup: "13 Lakeview Blvd, SF",
-      dropoff: "201 Sunset Rd, Daly City",
-      distance: "10.1 km",
-      price: "$19.20",
-    },
-  ];
+  useEffect(() => {
+    // Initial fetch
+    changeTab("Ongoing");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Prevent screenshots
+  useEffect(() => {
+    const preventScreenshot = async () => {
+      try {
+        await activateKeepAwakeAsync("prevent-screenshot");
+      } catch {
+        console.log("Screenshot prevention not available");
+      }
+    };
+
+    preventScreenshot();
+
+    return () => {
+      deactivateKeepAwake("prevent-screenshot");
+    };
+  }, []);
+
+  const handleOrderPress = (orderId: string) => {
+    router.push(`/orders/${orderId}` as any);
+  };
+
+  const handleAccept = async (orderId: string) => {
+    try {
+      setAcceptingId(orderId);
+      await orderService.track({
+        orderId,
+        note: "order has been picked up",
+        status: "accepted",
+      });
+      // Show success alert
+      alert.success({
+        heading: "Order accepted",
+        message: "You're now assigned to this order.",
+        duration: 3000,
+      });
+      // Refresh current tab to reflect new status
+      onRefresh();
+    } catch (error) {
+      console.error("Failed to accept order", error);
+      alert.error({
+        heading: "Failed to accept order",
+        message: "Please try again.",
+        duration: 4000,
+      });
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
+  const renderOrderCard = ({ item }: { item: IOrderHistoryItem }) => {
+    const isCompleted = activeTab === "Completed";
+    const formattedFee = `₦${item.deliveryFee.toLocaleString()}`;
+    const formattedDate = new Date(item.updatedAt).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => handleOrderPress(item.id)}
+        activeOpacity={0.7}
+      >
+        {isCompleted ? (
+          <>
+            {/* For completed orders, show order ID and date */}
+            <View style={styles.row}>
+              <Ionicons name="receipt-outline" size={16} color="#666" />
+              <Text style={styles.locationText} numberOfLines={1}>
+                Order #{item.id.slice(0, 8)}
+              </Text>
+            </View>
+            <View style={styles.row}>
+              <Ionicons name="calendar-outline" size={16} color="#666" />
+              <Text style={styles.locationText} numberOfLines={1}>
+                {formattedDate}
+              </Text>
+            </View>
+            {item.riderRewarded && (
+              <View style={styles.row}>
+                <Ionicons name="star" size={16} color="#FFD700" />
+                <Text style={[styles.locationText, { color: "#FFD700" }]}>
+                  Rider Rewarded
+                </Text>
+              </View>
+            )}
+          </>
+        ) : (
+          <>
+            {/* For ongoing/upcoming orders, show pickup and dropoff */}
+            <View style={styles.row}>
+              <Ionicons name="navigate" size={16} color={tzColors.primary} />
+              <Text style={styles.locationText} numberOfLines={1}>
+                {item.pickUpLocationAddress}
+              </Text>
+            </View>
+            <View style={styles.row}>
+              <Ionicons name="flag" size={16} color="#FF4C4C" />
+              <Text style={styles.locationText} numberOfLines={1}>
+                {item.dropOffLocationAddress}
+              </Text>
+            </View>
+          </>
+        )}
+
+        <View style={styles.detailsRow}>
+          <View style={styles.etaContainer}>
+            <Ionicons name="time-outline" size={14} color="#777" />
+            <Text style={styles.etaText}>{item.eta}</Text>
+          </View>
+          <Text style={styles.detailValue}>{formattedFee}</Text>
+        </View>
+
+        {/* Accept action for Upcoming orders */}
+        {activeTab === "Upcoming" && (
+          <TouchableOpacity
+            style={styles.acceptButton}
+            onPress={() => handleAccept(item.id)}
+            disabled={acceptingId === item.id}
+            activeOpacity={0.8}
+          >
+            {acceptingId === item.id ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.acceptButtonText}>Accept Order</Text>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {/* Role badge */}
+        <View style={styles.roleBadge}>
+          <Text style={styles.roleText}>
+            {item.userOrderRole === "sender" ? "Sender" : "Recipient"}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderEmptyState = () => {
+    if (loading) return null;
+
+    return (
+      <View style={styles.emptyState}>
+        <Ionicons name="file-tray-outline" size={64} color="#ccc" />
+        <Text style={styles.emptyTitle}>No {activeTab} Orders</Text>
+        <Text style={styles.emptySubtitle}>
+          {activeTab === "Upcoming"
+            ? "You don't have any upcoming orders"
+            : activeTab === "Ongoing"
+            ? "You don't have any ongoing deliveries"
+            : "You haven't completed any orders yet"}
+        </Text>
+      </View>
+    );
+  };
+
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={styles.loadingMore}>
+        <ActivityIndicator size="small" color={tzColors.primary} />
+        <Text style={styles.loadingMoreText}>Loading more...</Text>
+      </View>
+    );
+  };
+
+  const handleLoadMore = () => {
+    if (currentPage < totalPages && !loadingMore) {
+      loadMore();
+    }
+  };
 
   return (
     <View style={styles.container}>
       {/* Tabs */}
       <View style={styles.tabs}>
-        {["Upcoming", "Completed", "Cancelled"].map((tab) => (
+        {(["Upcoming", "Ongoing", "Completed"] as OrderTab[]).map((tab) => (
           <TouchableOpacity
             key={tab}
-            onPress={() => setActiveTab(tab)}
+            onPress={() => changeTab(tab)}
             style={[styles.tab, activeTab === tab && styles.activeTab]}
           >
             <Text
@@ -58,30 +235,32 @@ export default function HistoryScreen() {
         ))}
       </View>
 
-      {/* Delivery List */}
-      <ScrollView style={{ marginTop: 10 }}>
-        {deliveries.map((d) => (
-          <View key={d.id} style={styles.card}>
-            <View style={styles.row}>
-              <Ionicons name="navigate" size={16} color="#00B624" />
-              <Text style={styles.locationText} numberOfLines={1}>
-                {d.pickup}
-              </Text>
-            </View>
-            <View style={styles.row}>
-              <Ionicons name="flag" size={16} color="#FF4C4C" />
-              <Text style={styles.locationText} numberOfLines={1}>
-                {d.dropoff}
-              </Text>
-            </View>
-
-            <View style={styles.detailsRow}>
-              <Text style={styles.detailLabel}>{d.distance}</Text>
-              <Text style={styles.detailValue}>{d.price}</Text>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+      {/* Order List */}
+      {loading && orders.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={tzColors.primary} />
+          <Text style={styles.loadingText}>Loading orders...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={orders}
+          renderItem={renderOrderCard}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={renderEmptyState}
+          ListFooterComponent={renderFooter}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[tzColors.primary]}
+              tintColor={tzColors.primary}
+            />
+          }
+        />
+      )}
     </View>
   );
 }
@@ -105,7 +284,7 @@ const styles = StyleSheet.create({
   tabs: {
     flexDirection: "row",
     borderWidth: 1,
-    borderColor: "#00B624",
+    borderColor: tzColors.primary,
     borderRadius: 10,
     overflow: "hidden",
   },
@@ -116,30 +295,122 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   activeTab: {
-    backgroundColor: "#00B624",
+    backgroundColor: tzColors.primary,
   },
-  tabText: { fontWeight: "500", color: "#00B624" },
+  tabText: { fontWeight: "500", color: tzColors.primary },
   activeTabText: { color: "#fff", fontWeight: "600" },
+
+  /* List */
+  listContent: {
+    paddingTop: 10,
+    paddingBottom: 20,
+  },
 
   /* Cards */
   card: {
     backgroundColor: "#fff",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#00B624",
+    borderColor: tzColors.primary,
     padding: 14,
     marginBottom: 12,
+    position: "relative",
   },
   row: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
   locationText: { marginLeft: 8, color: "#333", fontSize: 13, flex: 1 },
   detailsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
     borderTopWidth: 1,
     borderTopColor: "#e0e0e0",
     marginTop: 8,
     paddingTop: 6,
   },
+  etaContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  etaText: {
+    fontSize: 12,
+    color: "#777",
+  },
   detailLabel: { fontSize: 13, color: "#777" },
-  detailValue: { fontSize: 14, color: "#00B624", fontWeight: "600" },
+  detailValue: {
+    fontSize: 14,
+    color: tzColors.primary,
+    fontWeight: "600",
+  },
+  roleBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "#E6F5EF",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  roleText: {
+    fontSize: 10,
+    color: tzColors.primary,
+    fontWeight: "600",
+    textTransform: "uppercase",
+  },
+
+  /* Empty State */
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 80,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333",
+    marginTop: 16,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: "#777",
+    marginTop: 8,
+    textAlign: "center",
+    paddingHorizontal: 40,
+  },
+
+  /* Loading States */
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 80,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: "#777",
+    marginTop: 12,
+  },
+  loadingMore: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 16,
+    gap: 8,
+  },
+  loadingMoreText: {
+    fontSize: 13,
+    color: "#777",
+  },
+  acceptButton: {
+    marginTop: 10,
+    backgroundColor: tzColors.primary,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  acceptButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
 });

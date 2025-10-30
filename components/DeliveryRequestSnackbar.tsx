@@ -7,95 +7,156 @@ import {
   Animated,
   ActivityIndicator,
 } from "react-native";
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/redux/store";
-import {
-  acceptDeliveryRequest,
-  declineDeliveryRequest,
-  showDeliveryRequest,
-} from "@/redux/slices/deliveryRequestSlice";
-
-// Demo delivery requests
-const demoDeliveryRequests = [
-  {
-    id: "req_001",
-    customerName: "Sarah Johnson",
-    pickupLocation: "Victoria Island, Lagos",
-    dropoffLocation: "Ikeja, Lagos",
-    distance: "12.5 km",
-    estimatedEarning: 2500,
-    packageType: "Documents",
-    urgency: "urgent" as const,
-    timeAgo: "2 min ago",
-  },
-  {
-    id: "req_002",
-    customerName: "Mike Brown",
-    pickupLocation: "Lekki Phase 1",
-    dropoffLocation: "Surulere, Lagos",
-    distance: "18.2 km",
-    estimatedEarning: 3200,
-    packageType: "Electronics",
-    urgency: "normal" as const,
-    timeAgo: "5 min ago",
-  },
-];
+import { useDeliveryRequest } from "@/hooks/useDeliveryRequest";
+import { useAssignedOrders } from "@/hooks/useAssignedOrders";
+import { IAssignedOrder } from "@/lib/api";
+import { useRiderActiveStatus } from "@/hooks/useRiderActiveStatus";
 
 export default function DeliveryRequestSnackbar() {
-  const dispatch = useDispatch();
-  const { showDeliveryModal, currentRequest, isOnline } = useSelector(
-    (state: RootState) => state.deliveryRequest
-  );
+  const {
+    showDeliveryModal,
+    currentRequest,
+    showDeliveryRequest,
+    acceptDeliveryRequest,
+    declineDeliveryRequest,
+  } = useDeliveryRequest();
+  const { isActive } = useRiderActiveStatus();
+  const {
+    assignedOrders,
+    newOrderReceived,
+    clearNewOrder,
+    acceptOrder,
+    declineOrder,
+    processingOrderId,
+  } = useAssignedOrders();
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const processedOrdersRef = useRef(new Set<string>());
 
-  // Simulate delivery requests when online
+  // Convert IAssignedOrder to the format expected by useDeliveryRequest
+  const convertToRequestFormat = (order: IAssignedOrder) => ({
+    id: order.id,
+    customerName: order.userFullName,
+    pickupLocation: order.pickUpLocation.address,
+    dropoffLocation: order.dropOffLocation.address,
+    distance: order.eta, // Using ETA as distance for now
+    estimatedEarning: order.amount,
+    packageType: "Package", // Not provided in API, using default
+    urgency: "normal" as const, // Not provided in API, using default
+    timeAgo: "Just now",
+  });
+
+  // Show delivery request when new order is received via WebSocket
   useEffect(() => {
-    if (isOnline) {
-      const timer = setTimeout(() => {
-        dispatch(showDeliveryRequest(demoDeliveryRequests[0]));
-        fadeAnim.setValue(0);
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }).start();
-      }, 3000);
-
-      return () => clearTimeout(timer);
+    if (
+      newOrderReceived &&
+      isActive &&
+      !processedOrdersRef.current.has(newOrderReceived.id)
+    ) {
+      processedOrdersRef.current.add(newOrderReceived.id);
+      showDeliveryRequest(convertToRequestFormat(newOrderReceived));
+      fadeAnim.setValue(0);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      clearNewOrder();
     }
-  }, [isOnline, dispatch, fadeAnim]);
+  }, [
+    newOrderReceived,
+    isActive,
+    fadeAnim,
+    showDeliveryRequest,
+    clearNewOrder,
+  ]);
 
-  const handleAcceptRequest = () => {
+  // Show first assigned order on mount if online
+  useEffect(() => {
+    if (
+      isActive &&
+      assignedOrders.length > 0 &&
+      !showDeliveryModal &&
+      !processedOrdersRef.current.has(assignedOrders[0].id)
+    ) {
+      const firstOrder = assignedOrders[0];
+      processedOrdersRef.current.add(firstOrder.id);
+      showDeliveryRequest(convertToRequestFormat(firstOrder));
+      fadeAnim.setValue(0);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [
+    isActive,
+    assignedOrders,
+    showDeliveryModal,
+    fadeAnim,
+    showDeliveryRequest,
+  ]);
+
+  const handleAcceptRequest = async () => {
+    if (!currentRequest) return;
+
+    // Call API to accept order
+    const result = await acceptOrder(currentRequest.id);
+
+    // Animate out
     Animated.timing(fadeAnim, {
       toValue: 0,
       duration: 200,
       useNativeDriver: true,
     }).start(() => {
-      dispatch(acceptDeliveryRequest());
+      acceptDeliveryRequest();
     });
+
+    // Show feedback to user
+    if (!result.success) {
+      // You can show an alert here if needed
+      console.error("Failed to accept order:", result.message);
+    }
   };
 
-  const handleDeclineRequest = () => {
+  const handleDeclineRequest = async () => {
+    if (!currentRequest) return;
+
+    // Call API to decline order
+    const result = await declineOrder(currentRequest.id);
+
+    // Animate out
     Animated.timing(fadeAnim, {
       toValue: 0,
       duration: 200,
       useNativeDriver: true,
     }).start(() => {
-      dispatch(declineDeliveryRequest());
+      declineDeliveryRequest();
     });
 
-    // Show next request after delay if still online
+    // Show feedback to user
+    if (!result.success) {
+      console.error("Failed to decline order:", result.message);
+    }
+
+    // Show next assigned order after delay if still online
     setTimeout(() => {
-      if (isOnline && demoDeliveryRequests[1]) {
-        dispatch(showDeliveryRequest(demoDeliveryRequests[1]));
-        fadeAnim.setValue(0);
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }).start();
+      if (isActive && assignedOrders.length > 0) {
+        // Find next unprocessed order
+        const nextOrder = assignedOrders.find(
+          (order) => !processedOrdersRef.current.has(order.id)
+        );
+        if (nextOrder) {
+          processedOrdersRef.current.add(nextOrder.id);
+          showDeliveryRequest(convertToRequestFormat(nextOrder));
+          fadeAnim.setValue(0);
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }).start();
+        }
       }
-    }, 5000);
+    }, 2000);
   };
 
   if (!showDeliveryModal) {
@@ -177,22 +238,38 @@ export default function DeliveryRequestSnackbar() {
                   {currentRequest.distance}
                 </Text>
                 <Text style={styles.snackbarEarning}>
-                  ₦{currentRequest.estimatedEarning.toLocaleString()}
+                  ₦{currentRequest.estimatedEarning?.toLocaleString()}
                 </Text>
               </View>
 
               <View style={styles.snackbarActions}>
                 <TouchableOpacity
-                  style={styles.snackbarDeclineButton}
+                  style={[
+                    styles.snackbarDeclineButton,
+                    processingOrderId && styles.snackbarButtonDisabled,
+                  ]}
                   onPress={handleDeclineRequest}
+                  disabled={!!processingOrderId}
                 >
-                  <Text style={styles.snackbarDeclineText}>Decline</Text>
+                  {processingOrderId === currentRequest?.id ? (
+                    <ActivityIndicator size="small" color="#FF3B30" />
+                  ) : (
+                    <Text style={styles.snackbarDeclineText}>Decline</Text>
+                  )}
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.snackbarAcceptButton}
+                  style={[
+                    styles.snackbarAcceptButton,
+                    processingOrderId && styles.snackbarButtonDisabled,
+                  ]}
                   onPress={handleAcceptRequest}
+                  disabled={!!processingOrderId}
                 >
-                  <Text style={styles.snackbarAcceptText}>Accept</Text>
+                  {processingOrderId === currentRequest?.id ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.snackbarAcceptText}>Accept</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </>
@@ -286,6 +363,9 @@ const styles = StyleSheet.create({
   snackbarActions: {
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  snackbarButtonDisabled: {
+    opacity: 0.5,
   },
   snackbarDeclineButton: {
     flex: 1,

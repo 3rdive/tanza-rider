@@ -1,399 +1,68 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useRef,
+  useMemo,
+  useEffect,
+  useCallback,
+} from "react";
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Animated,
-  Modal,
-  TextInput,
+  ActivityIndicator,
   Alert,
-  Dimensions,
-  Platform,
-  Pressable,
+  FlatList,
+  RefreshControl,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { BalanceSummary } from "../../components/wallet/balance-summary";
 import { AddMoneyButton } from "../../components/wallet/add-money";
-
-// TypeScript interfaces
-interface Transaction {
-  id: string;
-  type: "delivery" | "withdrawal" | "earning";
-  amount: number;
-  description: string;
-  date: string;
-  status: "completed" | "pending" | "failed";
-  orderId?: string;
-}
-
-interface EarningsSummary {
-  weekly: number;
-  monthly: number;
-  totalEarnings: number;
-  totalWithdrawals: number;
-}
-
-interface WithdrawalMethod {
-  id: string;
-  name: string;
-  type: "bank";
-  details: string;
-  accountNumber?: string;
-}
-
-//TODO: fix the addPayment modal method & change the payment screen
+import TransactionItem from "../../components/wallet/TransactionItem";
+import WeekFilterModal from "../../components/wallet/WeekFilterModal";
+import { useWalletData } from "../../hooks/useWalletData";
+import { useTransactions } from "../../hooks/useTransactions";
+import {
+  WeekFilterOption,
+  WEEK_FILTER_OPTIONS,
+  WALLET_COLORS,
+} from "../../lib/walletConstants";
 
 const RiderWalletScreen: React.FC = () => {
-  const [currentBalance] = useState<number>(45750);
-  const [showWithdrawModal, setShowWithdrawModal] = useState<boolean>(false);
-  const [showAddMethodModal, setShowAddMethodModal] = useState<boolean>(false);
-  const [withdrawalMethods, setWithdrawalMethods] = useState<
-    WithdrawalMethod[]
-  >([
-    {
-      id: "2",
-      name: "Abiodun Samuel",
-      type: "bank",
-      details: "UBA",
-      accountNumber: "9152384990",
-    },
-  ]);
-  const [selectedMethodId, setSelectedMethodId] = useState<string>("");
-  const [withdrawAmount, setWithdrawAmount] = useState<string>("");
-  const [selectedPeriod, setSelectedPeriod] = useState<"weekly" | "monthly">(
-    "weekly"
-  );
-  // Week filter options for transactions breakdown
-  const [selectedWeekOption, setSelectedWeekOption] = useState<
-    "this_week" | "last_week" | "last_2_weeks" | "last_4_weeks" | "all"
-  >("this_week");
+  const {
+    walletData,
+    isLoading: isLoadingWallet,
+    error: walletError,
+    refetch: refetchWallet,
+  } = useWalletData();
+  const {
+    transactions,
+    isLoading: isLoadingTransactions,
+    isLoadingMore,
+    isRefreshing,
+    error: transactionsError,
+    loadMore,
+    refresh,
+  } = useTransactions();
+
+  const [selectedWeekOption, setSelectedWeekOption] =
+    useState<WeekFilterOption>(WEEK_FILTER_OPTIONS.this_week);
   const [showWeekFilterModal, setShowWeekFilterModal] =
     useState<boolean>(false);
-  const [newMethodName, setNewMethodName] = useState<string>("");
-  const [newMethodType, setNewMethodType] = useState<"bank">("bank");
-  const [newMethodDetails, setNewMethodDetails] = useState<string>("");
-  const [newMethodAccount, setNewMethodAccount] = useState<string>("");
-
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(300)).current;
-  const addMethodFadeAnim = useRef(new Animated.Value(0)).current;
-  const addMethodSlideAnim = useRef(
-    new Animated.Value(Dimensions.get("window").height)
-  ).current;
-
-  // Mock data
-  const earningsSummary: EarningsSummary = {
-    weekly: 12500,
-    monthly: 45750,
-    totalEarnings: 125000,
-    totalWithdrawals: 79250,
-  };
-
-  const transactions = useMemo<Transaction[]>(() => {
-    // Create sample dates relative to today for testing filters
-    const now = new Date();
-    const iso = (d: Date) => d.toISOString();
-
-    const daysAgo = (n: number) => {
-      const d = new Date(now);
-      d.setDate(d.getDate() - n);
-      return d;
-    };
-
-    return [
-      // This week
-      {
-        id: "w1",
-        type: "delivery",
-        amount: 2500,
-        description: "Package delivery - Order #TW001",
-        date: iso(daysAgo(1)),
-        status: "completed",
-        orderId: "TW001",
-      },
-      {
-        id: "w2",
-        type: "earning",
-        amount: 1800,
-        description: "Delivery bonus - Peak hours",
-        date: iso(daysAgo(2)),
-        status: "completed",
-      },
-      {
-        id: "w3",
-        type: "delivery",
-        amount: 3200,
-        description: "Package delivery - Order #TW002",
-        date: iso(daysAgo(3)),
-        status: "completed",
-        orderId: "TW002",
-      },
-
-      // Last week
-      {
-        id: "lw1",
-        type: "withdrawal",
-        amount: -15000,
-        description: "Bank withdrawal - GTBank",
-        date: iso(daysAgo(8)),
-        status: "completed",
-      },
-      {
-        id: "lw2",
-        type: "delivery",
-        amount: 2100,
-        description: "Package delivery - Order #LW001",
-        date: iso(daysAgo(9)),
-        status: "completed",
-        orderId: "LW001",
-      },
-
-      // 2 weeks ago
-      {
-        id: "l2w1",
-        type: "earning",
-        amount: 900,
-        description: "Referral bonus",
-        date: iso(daysAgo(15)),
-        status: "completed",
-      },
-      {
-        id: "l2w2",
-        type: "delivery",
-        amount: 3000,
-        description: "Package delivery - Order #L2W001",
-        date: iso(daysAgo(16)),
-        status: "completed",
-        orderId: "L2W001",
-      },
-
-      // 4 weeks ago
-      {
-        id: "l4w1",
-        type: "withdrawal",
-        amount: -8000,
-        description: "Bank withdrawal - UBA",
-        date: iso(daysAgo(29)),
-        status: "pending",
-      },
-      {
-        id: "l4w2",
-        type: "delivery",
-        amount: 4200,
-        description: "Package delivery - Order #L4W001",
-        date: iso(daysAgo(32)),
-        status: "completed",
-        orderId: "L4W001",
-      },
-
-      // Older
-      {
-        id: "old1",
-        type: "earning",
-        amount: 500,
-        description: "Promotional bonus",
-        date: iso(daysAgo(45)),
-        status: "completed",
-      },
-    ];
-  }, []);
-
-  const openWithdrawModal = (): void => {
-    setShowWithdrawModal(true);
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
-  const closeWithdrawModal = (): void => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 300,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setShowWithdrawModal(false);
-      setWithdrawAmount("");
-      setSelectedMethodId("");
-    });
-  };
-
-  const openAddMethodModal = (): void => {
-    setShowAddMethodModal(true);
-    addMethodFadeAnim.setValue(0);
-    addMethodSlideAnim.setValue(Dimensions.get("window").height);
-
-    Animated.parallel([
-      Animated.timing(addMethodFadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(addMethodSlideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
-  const closeAddMethodModal = (): void => {
-    Animated.parallel([
-      Animated.timing(addMethodFadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(addMethodSlideAnim, {
-        toValue: Dimensions.get("window").height,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setShowAddMethodModal(false);
-      setNewMethodName("");
-      setNewMethodType("bank");
-      setNewMethodDetails("");
-      setNewMethodAccount("");
-    });
-  };
-
-  const addWithdrawalMethod = (): void => {
-    if (!newMethodName || !newMethodDetails || !newMethodAccount) {
-      Alert.alert("Error", "Please fill in all fields");
-      return;
-    }
-
-    const newMethod: WithdrawalMethod = {
-      id: Date.now().toString(),
-      name: newMethodName,
-      type: newMethodType,
-      details: newMethodDetails,
-      accountNumber: newMethodAccount,
-    };
-
-    setWithdrawalMethods((prev) => [...prev, newMethod]);
-    closeAddMethodModal();
-    Alert.alert("Success", "Withdrawal method added successfully");
-  };
-
-  const removeWithdrawalMethod = (methodId: string): void => {
-    Alert.alert(
-      "Remove Method",
-      "Are you sure you want to remove this withdrawal method?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: () => {
-            setWithdrawalMethods((prev) =>
-              prev.filter((method) => method.id !== methodId)
-            );
-          },
-        },
-      ]
-    );
-  };
-
-  const handleWithdraw = (): void => {
-    const amount = Number.parseFloat(withdrawAmount);
-    if (!amount || amount <= 0) {
-      Alert.alert("Error", "Please enter a valid amount");
-      return;
-    }
-    if (amount > currentBalance) {
-      Alert.alert("Error", "Insufficient balance");
-      return;
-    }
-    if (!selectedMethodId) {
-      Alert.alert("Error", "Please select a withdrawal method");
-      return;
-    }
-
-    const selectedMethod = withdrawalMethods.find(
-      (method) => method.id === selectedMethodId
-    );
-    if (!selectedMethod) return;
-
-    Alert.alert(
-      "Withdraw Funds",
-      `Withdraw ₦${amount.toLocaleString()} to ${selectedMethod.name} - ${
-        selectedMethod.details
-      } (${selectedMethod.accountNumber})?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Confirm",
-          onPress: () => {
-            closeWithdrawModal();
-            Alert.alert("Success", "Withdrawal request submitted successfully");
-          },
-        },
-      ]
-    );
-  };
-
-  const getTransactionIcon = (type: Transaction["type"]): string => {
-    switch (type) {
-      case "delivery":
-        return "bicycle";
-      case "earning":
-        return "trending-up";
-      case "withdrawal":
-        return "arrow-down";
-      default:
-        return "wallet";
-    }
-  };
-
-  const getTransactionColor = (
-    type: Transaction["type"],
-    amount: number
-  ): string => {
-    if (amount < 0) return "#ef4444";
-    return type === "delivery" || type === "earning" ? "#00B624" : "#6b7280";
-  };
-
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  // Helper: compute start of day in UTC for comparison
-  const startOfDay = (d: Date) =>
-    new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
   // Build filtered transactions based on selectedWeekOption
   const filteredTransactions = useMemo(() => {
-    if (!transactions || selectedWeekOption === "all") return transactions;
+    if (!transactions || selectedWeekOption === WEEK_FILTER_OPTIONS.all)
+      return transactions;
 
     const now = new Date();
-    const todayStart = startOfDay(now);
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    );
 
     // helper to get days ago
     const daysAgo = (n: number) => {
@@ -404,24 +73,24 @@ const RiderWalletScreen: React.FC = () => {
 
     let fromDate: Date;
     switch (selectedWeekOption) {
-      case "this_week":
+      case WEEK_FILTER_OPTIONS.this_week:
         // start from most recent monday
         const day = todayStart.getDay();
         const diff = (day + 6) % 7; // monday=0
         fromDate = daysAgo(diff);
         break;
-      case "last_week":
+      case WEEK_FILTER_OPTIONS.last_week:
         // start from monday last week
         const day2 = todayStart.getDay();
         const diff2 = (day2 + 6) % 7; // days since monday
         fromDate = daysAgo(diff2 + 7);
         break;
-      case "last_2_weeks":
+      case WEEK_FILTER_OPTIONS.last_2_weeks:
         const day3 = todayStart.getDay();
         const diff3 = (day3 + 6) % 7;
         fromDate = daysAgo(diff3 + 14);
         break;
-      case "last_4_weeks":
+      case WEEK_FILTER_OPTIONS.last_4_weeks:
         const day4 = todayStart.getDay();
         const diff4 = (day4 + 6) % 7;
         fromDate = daysAgo(diff4 + 28);
@@ -437,327 +106,145 @@ const RiderWalletScreen: React.FC = () => {
     });
   }, [transactions, selectedWeekOption]);
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          {/* <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity> */}
-          <Text style={styles.headerTitle}>Wallet</Text>
+  // Render footer for loading more
+  const renderFooter = () => {
+    if (!isLoadingMore) return null;
+    return (
+      <View style={styles.footerLoading}>
+        <ActivityIndicator size="small" color="#00B624" />
+        <Text style={styles.footerLoadingText}>Loading more...</Text>
+      </View>
+    );
+  };
+
+  // Render list header
+  const renderListHeader = () => (
+    <>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Wallet</Text>
+        <TouchableOpacity onPress={() => router.push("/profile/notification")}>
+          <Ionicons name="notifications-outline" size={24} color="#000" />
+        </TouchableOpacity>
+      </View>
+
+      <View>
+        <AddMoneyButton onPress={() => router.push("/payment/methods")} />
+
+        {/* Wallet Balance Summary */}
+        {isLoadingWallet ? (
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color="#00B624" />
+            <Text style={styles.loadingText}>Loading wallet...</Text>
+          </View>
+        ) : walletError ? (
+          <View style={styles.errorCard}>
+            <Ionicons name="alert-circle" size={48} color="#ef4444" />
+            <Text style={styles.errorTitle}>Failed to Load Wallet</Text>
+            <Text style={styles.errorMessage}>{walletError}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={refetchWallet}
+            >
+              <Ionicons name="refresh" size={20} color="#fff" />
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <BalanceSummary
+            availableBalance={walletData?.walletBalance || 0}
+            totalExpenditure={walletData?.totalAmountEarned || 0}
+          />
+        )}
+      </View>
+
+      {/* Transaction Section Header */}
+      <View style={styles.transactionSectionHeader}>
+        <Text style={styles.sectionTitle}>Break Down</Text>
+        <TouchableOpacity
+          style={styles.filterButton}
+          onPress={() => setShowWeekFilterModal(true)}
+        >
+          <Text style={styles.filterButtonText}>
+            {selectedWeekOption === WEEK_FILTER_OPTIONS.this_week
+              ? "This Week"
+              : selectedWeekOption === WEEK_FILTER_OPTIONS.last_week
+              ? "Last Week"
+              : selectedWeekOption === WEEK_FILTER_OPTIONS.last_2_weeks
+              ? "Last 2 Weeks"
+              : selectedWeekOption === WEEK_FILTER_OPTIONS.last_4_weeks
+              ? "Last 4 Weeks"
+              : "All"}
+          </Text>
+          <Ionicons name="chevron-down" size={16} color="#00B624" />
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+
+  // Render empty component
+  const renderEmptyComponent = () => {
+    if (isLoadingTransactions) {
+      return (
+        <View style={styles.transactionsLoading}>
+          <ActivityIndicator size="large" color="#00B624" />
+          <Text style={styles.loadingText}>Loading transactions...</Text>
+        </View>
+      );
+    }
+
+    if (transactionsError) {
+      return (
+        <View style={styles.transactionsError}>
+          <Ionicons name="alert-circle" size={32} color="#ef4444" />
+          <Text style={styles.errorMessage}>{transactionsError}</Text>
           <TouchableOpacity
-            onPress={() => router.push("/profile/notification")}
+            style={styles.retryButtonSmall}
+            onPress={() => refresh()}
           >
-            <Ionicons name="notifications-outline" size={24} color="#000" />
+            <Ionicons name="refresh" size={16} color="#00B624" />
+            <Text style={styles.retryButtonTextSmall}>Retry</Text>
           </TouchableOpacity>
         </View>
+      );
+    }
 
-        {/* Balance Card */}
-        <View>
-          <AddMoneyButton onPress={() => router.push("/payment/methods")} />
-          <BalanceSummary availableBalance={100} totalExpenditure={1000000} />
-        </View>
-        {/* <View style={styles.balanceCard}>
-          <Text style={styles.balanceLabel}>Current Balance</Text>
-          <Text style={styles.balanceAmount}>
-            ₦{currentBalance.toLocaleString()}
-          </Text>
-          <Pressable
-            style={styles.withdrawButton}
-            onPress={() => router.push("/payment/methods")}
-          >
-            <Text style={styles.withdrawButtonText}>Add Payment Method</Text>
-          </Pressable>
-        </View> */}
+    return (
+      <View style={styles.emptyState}>
+        <Ionicons name="document-text-outline" size={48} color="#94a3b8" />
+        <Text style={styles.emptyStateText}>No transactions found</Text>
+      </View>
+    );
+  };
 
-        {/* Transaction Logs */}
-        <View style={styles.transactionSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Break Down</Text>
-            <TouchableOpacity
-              style={styles.filterButton}
-              onPress={() => setShowWeekFilterModal(true)}
-            >
-              <Text style={styles.filterButtonText}>
-                {selectedWeekOption === "this_week"
-                  ? "This Week"
-                  : selectedWeekOption === "last_week"
-                  ? "Last Week"
-                  : selectedWeekOption === "last_2_weeks"
-                  ? "Last 2 Weeks"
-                  : selectedWeekOption === "last_4_weeks"
-                  ? "Last 4 Weeks"
-                  : "All"}
-              </Text>
-              <Ionicons name="chevron-down" size={16} color="#00B624" />
-            </TouchableOpacity>
-          </View>
-
-          {filteredTransactions.map((transaction) => (
-            <TouchableOpacity
-              key={transaction.id}
-              style={styles.transactionItem}
-            >
-              <View style={styles.transactionIcon}>
-                <Ionicons
-                  name={getTransactionIcon(transaction.type) as any}
-                  size={20}
-                  color={getTransactionColor(
-                    transaction.type,
-                    transaction.amount
-                  )}
-                />
-              </View>
-
-              <View style={styles.transactionDetails}>
-                <Text style={styles.transactionDescription}>
-                  {transaction.description}
-                </Text>
-                <Text style={styles.transactionDate}>
-                  {formatDate(transaction.date)}
-                </Text>
-              </View>
-
-              <View style={styles.transactionRight}>
-                <Text
-                  style={[
-                    styles.transactionAmount,
-                    {
-                      color: getTransactionColor(
-                        transaction.type,
-                        transaction.amount
-                      ),
-                    },
-                  ]}
-                >
-                  {transaction.amount > 0 ? "+" : ""}₦
-                  {Math.abs(transaction.amount).toLocaleString()}
-                </Text>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    {
-                      backgroundColor:
-                        transaction.status === "completed"
-                          ? "#dcfce7"
-                          : transaction.status === "pending"
-                          ? "#fef3c7"
-                          : "#fee2e2",
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.statusText,
-                      {
-                        color:
-                          transaction.status === "completed"
-                            ? "#16a34a"
-                            : transaction.status === "pending"
-                            ? "#d97706"
-                            : "#dc2626",
-                      },
-                    ]}
-                  >
-                    {transaction.status}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-      {
-        <Modal
-          visible={showAddMethodModal}
-          transparent
-          animationType="none"
-          presentationStyle="overFullScreen"
-        >
-          <View style={styles.addMethodModalOverlay}>
-            <TouchableOpacity
-              style={styles.modalBackdrop}
-              activeOpacity={1}
-              onPress={closeAddMethodModal}
-            />
-            <View style={styles.addMethodModalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Add Withdrawal Method</Text>
-                <TouchableOpacity onPress={closeAddMethodModal}>
-                  <Ionicons name="close" size={24} color="#000" />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView
-                style={styles.addMethodModalBody}
-                showsVerticalScrollIndicator={false}
-              >
-                {/* Method Type Section - Bank Only */}
-
-                {/* Form Fields */}
-                <View style={styles.formSection}>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Account Holder Name</Text>
-                    <View style={styles.inputContainer}>
-                      <Ionicons
-                        name="person-outline"
-                        size={20}
-                        color="#64748b"
-                        style={styles.inputIcon}
-                      />
-                      <TextInput
-                        style={styles.enhancedInput}
-                        value={newMethodName}
-                        onChangeText={setNewMethodName}
-                        placeholder="Enter full name as on account"
-                        placeholderTextColor="#94a3b8"
-                      />
-                    </View>
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Bank Name</Text>
-                    <View style={styles.inputContainer}>
-                      <Ionicons
-                        name="business-outline"
-                        size={20}
-                        color="#64748b"
-                        style={styles.inputIcon}
-                      />
-                      <TextInput
-                        style={styles.enhancedInput}
-                        value={newMethodDetails}
-                        onChangeText={setNewMethodDetails}
-                        placeholder="e.g. UBA, GTBank, First Bank"
-                        placeholderTextColor="#94a3b8"
-                      />
-                    </View>
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Account Number</Text>
-                    <View style={styles.inputContainer}>
-                      <Ionicons
-                        name="card-outline"
-                        size={20}
-                        color="#64748b"
-                        style={styles.inputIcon}
-                      />
-                      <TextInput
-                        style={styles.enhancedInput}
-                        value={newMethodAccount}
-                        onChangeText={setNewMethodAccount}
-                        placeholder="Enter 10-digit account number"
-                        placeholderTextColor="#94a3b8"
-                        keyboardType="numeric"
-                      />
-                    </View>
-                  </View>
-
-                  {/* Preview Card */}
-                  {(newMethodName || newMethodDetails || newMethodAccount) && (
-                    <View style={styles.previewSection}>
-                      <Text style={styles.previewTitle}>Preview</Text>
-                      <View style={styles.previewCard}>
-                        <View style={styles.previewIcon}>
-                          <Ionicons name="card" size={20} color="#00B624" />
-                        </View>
-                        <View style={styles.previewDetails}>
-                          <Text style={styles.previewName}>
-                            {newMethodName || "Account Holder Name"}
-                          </Text>
-                          <Text style={styles.previewSubtext}>
-                            {newMethodDetails || "Bank Name"} •{" "}
-                            {newMethodAccount || "Account"}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  )}
-                </View>
-
-                <TouchableOpacity
-                  style={[
-                    styles.addMethodConfirmButton,
-                    (!newMethodName ||
-                      !newMethodDetails ||
-                      !newMethodAccount) &&
-                      styles.addMethodConfirmButtonDisabled,
-                  ]}
-                  onPress={addWithdrawalMethod}
-                  disabled={
-                    !newMethodName || !newMethodDetails || !newMethodAccount
-                  }
-                >
-                  <Ionicons name="add-circle" size={20} color="#fff" />
-                  <Text style={styles.addMethodConfirmButtonText}>
-                    Add Withdrawal Method
-                  </Text>
-                </TouchableOpacity>
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
-      }
-
-      {/* Week Filter Modal */}
-      <Modal
-        visible={showWeekFilterModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowWeekFilterModal(false)}
-      >
-        <View style={styles.addMethodModalOverlay}>
-          <TouchableOpacity
-            style={styles.modalBackdrop}
-            activeOpacity={1}
-            onPress={() => setShowWeekFilterModal(false)}
+  return (
+    <SafeAreaView style={styles.container}>
+      <FlatList
+        data={filteredTransactions}
+        renderItem={({ item }) => <TransactionItem transaction={item} />}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={renderListHeader}
+        ListEmptyComponent={renderEmptyComponent}
+        ListFooterComponent={renderFooter}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={refresh}
+            colors={[WALLET_COLORS.primary]}
+            tintColor={WALLET_COLORS.primary}
           />
-          <View style={styles.weekModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filter by Week</Text>
-              <TouchableOpacity onPress={() => setShowWeekFilterModal(false)}>
-                <Ionicons name="close" size={24} color="#000" />
-              </TouchableOpacity>
-            </View>
-            <View style={{ padding: 20 }}>
-              {[
-                { key: "this_week", label: "This Week" },
-                { key: "last_week", label: "Last Week" },
-                { key: "last_2_weeks", label: "Last 2 Weeks" },
-                { key: "last_4_weeks", label: "Last 4 Weeks" },
-                { key: "all", label: "All" },
-              ].map((opt) => {
-                const key = opt.key as typeof selectedWeekOption;
-                const isSelected = selectedWeekOption === key;
-                return (
-                  <TouchableOpacity
-                    key={opt.key}
-                    style={[
-                      styles.weekOption,
-                      isSelected && styles.weekOptionSelected,
-                    ]}
-                    onPress={() => {
-                      setSelectedWeekOption(key);
-                      setShowWeekFilterModal(false);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.weekOptionText,
-                        isSelected && { color: "#fff" },
-                      ]}
-                    >
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        </View>
-      </Modal>
+        }
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.flatListContent}
+      />
+      <WeekFilterModal
+        visible={showWeekFilterModal}
+        selectedOption={selectedWeekOption}
+        onSelectOption={setSelectedWeekOption}
+        onClose={() => setShowWeekFilterModal(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -899,6 +386,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: "#fff",
+    marginHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: "#f1f5f9",
   },
@@ -971,7 +461,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     minHeight: "80%",
     maxHeight: "90%",
-    paddingBottom: Platform.OS === "ios" ? 40 : 20,
+    paddingBottom: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.25,
@@ -1240,7 +730,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    paddingBottom: Platform.OS === "ios" ? 40 : 20,
+    paddingBottom: 20,
     maxHeight: "50%",
   },
   weekOption: {
@@ -1259,6 +749,114 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#000",
     fontWeight: "600",
+  },
+  loadingCard: {
+    backgroundColor: "#fff",
+    margin: 20,
+    padding: 40,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#64748b",
+  },
+  errorCard: {
+    backgroundColor: "#fff",
+    margin: 20,
+    padding: 32,
+    borderRadius: 16,
+    alignItems: "center",
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: "#64748b",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  retryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#00B624",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  transactionsLoading: {
+    paddingVertical: 40,
+    alignItems: "center",
+  },
+  transactionsError: {
+    paddingVertical: 32,
+    alignItems: "center",
+  },
+  retryButtonSmall: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    gap: 6,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: "#00B624",
+  },
+  retryButtonTextSmall: {
+    color: "#00B624",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  emptyState: {
+    paddingVertical: 48,
+    alignItems: "center",
+  },
+  emptyStateText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#94a3b8",
+  },
+  footerLoading: {
+    paddingVertical: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  footerLoadingText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: "#64748b",
+  },
+  transactionSectionHeader: {
+    backgroundColor: "#fff",
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 0,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  flatListContent: {
+    flexGrow: 1,
   },
 });
 

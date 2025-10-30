@@ -21,7 +21,11 @@
         "backgroundColor": "#FFF"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.thirdive.tanzago"
+      "package": "com.thirdive.tanzago",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -52,8 +56,11 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {}
+      "router": {},
+      "eas": {
+        "projectId": "19f7e91d-d263-44ce-b55f-b78ec822f88d"
+      }
     },
-    "owner": "thirdive"
+    "owner": "sammie001"
   }
 }

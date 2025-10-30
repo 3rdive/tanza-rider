@@ -1,10 +1,17 @@
-[
-  {
-    "createdAt": "2025-09-19T14:15:04.390Z",
-    "id": "71f0c093-ffc6-4c3d-a442-5d99b81af0ed",
-    "note": "Order created",
-    "orderId": "00e0378b-873d-4695-bc70-f29b2aff4e3f",
-    "status": "picked_up",
-    "updatedAt": "2025-09-19T14:15:04.390Z"
-  }
-]
+{
+  "baseURL": "http://localhost:3030",
+  "data": "undefined",
+  "headers": {
+    "Accept": "application/json, text/plain, */*",
+    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoicmlkZXIiLCJzdWIiOiI0OTE2OWUyZS0zNjBlLTRkMWEtYWJkMi1iNDg0NWViOWQyMzIiLCJpYXQiOjE3NjExNzExNTQsImV4cCI6MTc2MTI1NzU1NH0.q2E4_Jy-c7bvXiQU_np8fegvTfK8xg5AmrOsJlhupC0",
+    "Content-Type": "undefined"
+  },
+  "method": "get",
+  "params": {
+    "limit": 20,
+    "orderStatus": ["accepted", "picked_up", "transit"],
+    "page": 1
+  },
+  "timeout": 30000,
+  "url": "/api/v1/order/orders/rider"
+}

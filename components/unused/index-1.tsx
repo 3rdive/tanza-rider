@@ -12,9 +12,7 @@ import {
   Switch,
 } from "react-native";
 import { router } from "expo-router";
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/redux/store";
-import { setOnlineStatus } from "@/redux/slices/deliveryRequestSlice";
+import { useDeliveryRequest } from "@/hooks/useDeliveryRequest";
 
 interface RiderStats {
   todayEarnings: number;
@@ -83,8 +81,7 @@ const demoPendingOrders: PendingOrder[] = [
 ];
 
 export default function RiderHomeScreen() {
-  const dispatch = useDispatch();
-  const { isOnline } = useSelector((state: RootState) => state.deliveryRequest);
+  const { isOnline, goOnline } = useDeliveryRequest();
 
   const [isLoading, setIsLoading] = useState(true);
   const [riderStats, setRiderStats] = useState<RiderStats>({
@@ -122,7 +119,7 @@ export default function RiderHomeScreen() {
   }, []);
 
   const handleToggleOnline = (value: boolean) => {
-    dispatch(setOnlineStatus(value));
+    goOnline(value);
   };
 
   const getStatusColor = (status: string) => {

@@ -8,7 +8,7 @@ export const AddMoneyButton = ({
 }) => {
   return (
     <TouchableOpacity style={styles.button} onPress={onPress}>
-      <Text style={styles.buttonText}>Add Withdrawal Option</Text>
+      <Text style={styles.buttonText}>Add Option</Text>
     </TouchableOpacity>
   );
 };

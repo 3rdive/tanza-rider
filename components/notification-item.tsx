@@ -1,13 +1,15 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ViewStyle } from "react-native";
 import { tzColors } from "../theme/color";
 import { poppinsFonts } from "../theme/fonts";
 
-type Props = {
+ type Props = {
   title: string;
   body?: string;
   time?: string;
   highlighted?: boolean;
+  onPress?: () => void;
+  containerStyle?: ViewStyle;
 };
 
 const NotificationItem: React.FC<Props> = ({
@@ -15,10 +17,14 @@ const NotificationItem: React.FC<Props> = ({
   body,
   time,
   highlighted,
+  onPress,
+  containerStyle,
 }) => {
+  const Container = onPress ? TouchableOpacity : View;
   return (
-    <View
-      style={[styles.container, highlighted && styles.highlightedContainer]}
+    <Container
+      onPress={onPress as any}
+      style={[styles.container, highlighted && styles.highlightedContainer, containerStyle]}
     >
       <Text style={[styles.title, highlighted && styles.highlightedTitle]}>
         {title}
@@ -33,7 +39,7 @@ const NotificationItem: React.FC<Props> = ({
           {time}
         </Text>
       ) : null}
-    </View>
+    </Container>
   );
 };
 

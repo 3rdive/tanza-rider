@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
 import { fetchRiderMe, updateRiderMe } from "@/redux/slices/riderSlice";
@@ -22,7 +22,7 @@ export const useRider = () => {
   );
 
   // Get document status
-  const documentStatus = riderState?.data?.documentStatus || "INITIAL";
+  const documentStatus = riderState?.data?.documentStatus || "";
 
   // Get rejection reason
   const rejectionReason = riderState?.data?.rejectionReason || null;
@@ -30,6 +30,10 @@ export const useRider = () => {
   // Determine if editing is allowed (only INITIAL or REJECTED)
   const isEditable =
     documentStatus === "INITIAL" || documentStatus === "REJECTED";
+
+  useEffect(() => {
+    fetchRider();
+  }, [fetchRider]);
 
   return {
     // State

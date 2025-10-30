@@ -18,12 +18,12 @@ export const BalanceSummary = ({
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.amount}>${formatAmount(availableBalance)}</Text>
+        <Text style={styles.amount}>₦{formatAmount(availableBalance)}</Text>
         <Text style={styles.label}>Available Balance</Text>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.amount}>${formatAmount(totalExpenditure)}</Text>
+        <Text style={styles.amount}>₦{formatAmount(totalExpenditure)}</Text>
         <Text style={styles.label}>Total Expend</Text>
       </View>
     </View>

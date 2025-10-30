@@ -35,18 +35,18 @@ AXIOS.interceptors.request.use(
           : rawHeaders;
 
       // Redact sensitive headers
-      const safeHeaders: Record<string, unknown> = { ...(headers || {}) };
+      // const safeHeaders: Record<string, unknown> = { ...(headers || {}) };
       // if (safeHeaders.Authorization) safeHeaders.Authorization = "***redacted***";
 
-      console.log("[Axios Request]", {
-        baseURL: config.baseURL,
-        method: config.method,
-        url: config.url,
-        params: config.params,
-        headers: safeHeaders,
-        data: config.data,
-        timeout: config.timeout,
-      });
+      // console.log("[Axios Request]", {
+      //   baseURL: config.baseURL,
+      //   method: config.method,
+      //   url: config.url,
+      //   params: config.params,
+      //   headers: safeHeaders,
+      //   data: config.data,
+      //   timeout: config.timeout,
+      // });
     }
     return config;
   },
@@ -66,19 +66,19 @@ AXIOS.interceptors.response.use(
   (response) => {
     if (isDev) {
       const rawHeaders = response.headers as any;
-      const headers =
-        typeof rawHeaders?.toJSON === "function"
-          ? rawHeaders.toJSON()
-          : rawHeaders;
+      // const headers =
+      //   typeof rawHeaders?.toJSON === "function"
+      //     ? rawHeaders.toJSON()
+      //     : rawHeaders;
 
-      console.log("[Axios Response]", {
-        method: response.config?.method,
-        url: response.config?.url,
-        status: response.status,
-        statusText: response.statusText,
-        headers,
-        data: response.data,
-      });
+      // console.log("[Axios Response]", {
+      //   method: response.config?.method,
+      //   url: response.config?.url,
+      //   status: response.status,
+      //   statusText: response.statusText,
+      //   headers,
+      //   data: response.data,
+      // });
     }
     return response;
   },
@@ -239,6 +239,15 @@ export interface IWallet {
   customerCode: string;
 }
 
+export interface IRiderWallet {
+  id: string;
+  walletBalance: number;
+  createdAt: string;
+  isFrozen: boolean;
+  customerCode: string | null;
+  totalAmountEarned: number;
+}
+
 export type TransactionType = "DEPOSIT" | "WITHDRAWAL" | "TRANSFER" | string;
 export interface ITransaction {
   id: string;
@@ -269,6 +278,12 @@ export interface IVirtualAccount {
 export const walletService = {
   getWallet: async () => {
     const { data } = await AXIOS.get<IApiResponse<IWallet>>("/api/v1/wallet");
+    return data;
+  },
+  getRiderWallet: async () => {
+    const { data } = await AXIOS.get<IApiResponse<IRiderWallet>>(
+      "/api/v1/wallet/rider"
+    );
     return data;
   },
   getVirtualAccount: async () => {
@@ -331,7 +346,7 @@ export const userService = {
 
 export interface IOrderTracking {
   id: string;
-  status: string; // e.g., picked_up, in_transit, delivered
+  status: string; // e.g., pending, accepted, picked_up, transit, delivered, cancelled
   note: string | null;
   createdAt: string;
   updatedAt: string;
@@ -377,6 +392,8 @@ export const transactionService = {
     limit: number;
     page: number;
     transactionType?: "ORDER" | "DEPOSIT" | string;
+    startDate?: string;
+    endDate?: string;
   }) => {
     const { data } = await AXIOS.get<
       IApiResponse<ITransaction[]> & { pagination: IPaginated<ITransaction> }
@@ -435,6 +452,123 @@ export interface ICreateOrderPayload {
 //   updatedAt: string;
 // }
 
+export interface IOrderHistoryItem {
+  id: string;
+  pickUpLocationAddress: string;
+  dropOffLocationAddress: string;
+  userOrderRole: string;
+  deliveryFee: number;
+  updatedAt: string;
+  eta: string;
+  riderRewarded: boolean;
+}
+
+export interface IOrderHistoryParams {
+  limit: number;
+  page: number;
+  orderStatus: string[]; // Can pass multiple statuses
+}
+
+export interface IOrderHistoryResponse {
+  data: IOrderHistoryItem[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface IOrderLocation {
+  address: string;
+  latitude: string;
+  longitude: string;
+}
+
+export interface IOrderDetail {
+  id: string;
+  sender: any;
+  recipient: any;
+  pickUpLocation: IOrderLocation;
+  dropOffLocation: IOrderLocation;
+  userOrderRole: string;
+  vehicleType: string;
+  noteForRider: string;
+  serviceChargeAmount: number;
+  deliveryFee: number;
+  totalAmount: number;
+  orderTracking: IOrderTracking[];
+  eta: string;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+  riderId: string;
+  riderAssigned: boolean;
+  riderAssignedAt: string;
+  hasRewardedRider: boolean;
+}
+
+export type OrderTrackingStatus =
+  | "pending"
+  | "accepted"
+  | "picked_up"
+  | "transit"
+  | "delivered"
+  | "cancelled"
+  | string;
+
+export interface IActiveOrderTracking {
+  id: string;
+  status: OrderTrackingStatus;
+  createdAt: string;
+}
+
+export interface IActiveOrder {
+  orderId: string;
+  userId: string;
+  note: string;
+  userFullName: string;
+  userMobileNumber: string;
+  profilePicUrl: string;
+  amount: number;
+  pickUpLocation: {
+    address: string;
+    latitude: string;
+    longitude: string;
+  };
+  dropOffLocation: {
+    address: string;
+    latitude: string;
+    longitude: string;
+  };
+  orderTracking: IActiveOrderTracking[];
+}
+
+export interface IAssignedOrder {
+  id: string;
+  userId: string;
+  userFullName: string;
+  userMobileNumber: string;
+  profilePicUrl: string;
+  pickUpLocation: {
+    address: string;
+    latitude: string;
+    longitude: string;
+  };
+  dropOffLocation: {
+    address: string;
+    latitude: string;
+    longitude: string;
+  };
+  eta: string;
+  amount: number;
+}
+
+export interface IRiderFeedbackPayload {
+  orderId: string;
+  accepted: boolean;
+}
+
 export const orderService = {
   calculateCharge: async (params: ICalculateChargeParams) => {
     const { data } = await AXIOS.get<IApiResponse<ICalculateChargeData>>(
@@ -460,7 +594,72 @@ export const orderService = {
     );
     return data;
   },
+  getOrderHistory: async (params: IOrderHistoryParams) => {
+    const { data } = await AXIOS.get<
+      IApiResponse<IOrderHistoryItem[]> & {
+        pagination: IOrderHistoryResponse["pagination"];
+      }
+    >("/api/v1/order/orders/rider", {
+      params,
+      paramsSerializer: {
+        indexes: null, // This will serialize array params as: orderStatus=value1&orderStatus=value2
+      },
+    });
+    return data;
+  },
+  getOrderById: async (orderId: string) => {
+    const { data } = await AXIOS.get<IApiResponse<IOrderDetail>>(
+      `/api/v1/order/${orderId}`
+    );
+    return data;
+  },
+  /**
+   * Get active orders for the current rider
+   */
+  getActiveOrders: async () => {
+    const { data } = await AXIOS.get<IApiResponse<IActiveOrder[]>>(
+      "/api/v1/order/active-orders"
+    );
+    return data;
+  },
+  /**
+   * Get assigned orders (pending that hasn't been accepted) for the current rider
+   */
+  getAssignedOrders: async () => {
+    const { data } = await AXIOS.get<IApiResponse<IAssignedOrder[]>>(
+      "/api/v1/order/assigned-orders"
+    );
+    return data;
+  },
+  /**
+   * Provide rider feedback (accept/decline) for an assigned order
+   */
+  riderFeedback: async (payload: IRiderFeedbackPayload) => {
+    const { data } = await AXIOS.post<IApiResponse<string>>(
+      "/api/v1/order/rider-feedback",
+      payload,
+      { headers: { "Content-Type": "application/json" } }
+    );
+    return data;
+  },
+  /**
+   * Create a new order tracking entry (e.g., accept, picked_up, delivered)
+   */
+  track: async (payload: ICreateOrderTrackingPayload) => {
+    const { data } = await AXIOS.post<IApiResponse<IOrderTracking>>(
+      "/api/v1/order/tracking",
+      payload,
+      { headers: { "Content-Type": "application/json" } }
+    );
+    return data;
+  },
 } as const;
+
+export interface ICreateOrderTrackingPayload {
+  orderId: string;
+  note?: string;
+  status: OrderTrackingStatus;
+}
 
 export interface ILocationFeatureProperties {
   osm_type: string;
@@ -563,7 +762,46 @@ export const riderService = {
     );
     return data;
   },
+  /**
+   * Get rider active status and last known coordinates
+   */
+  getActiveStatus: async () => {
+    const { data } = await AXIOS.get<IApiResponse<IRiderActiveStatus>>(
+      "/api/v1/riders/active-status"
+    );
+    return data;
+  },
+  /**
+   * Update rider active status and optionally location
+   */
+  updateActiveStatus: async (payload: IUpdateRiderActiveStatusPayload) => {
+    const { data } = await AXIOS.put<IApiResponse<IRiderActiveStatus>>(
+      "/api/v1/riders/active-status",
+      payload,
+      { headers: { "Content-Type": "application/json" } }
+    );
+    return data;
+  },
 } as const;
+
+// Rider Active Status
+export type RiderActiveStatus = "active" | "inactive" | string;
+
+export interface IRiderActiveStatus {
+  id: string;
+  status: RiderActiveStatus;
+  userId: string;
+  latitude: string | null;
+  longitude: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IUpdateRiderActiveStatusPayload {
+  status: RiderActiveStatus;
+  latitude?: string | null;
+  longitude?: string | null;
+}
 
 export const storageService = {
   upload: async (file: { uri: string; name?: string; type?: string }) => {
@@ -588,6 +826,146 @@ export const storageService = {
     >("/api/v1/storage-media/upload", form, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+    return data;
+  },
+} as const;
+
+// Withdrawal Options
+export interface IWithdrawalOption {
+  id: string;
+  riderId: string;
+  bankName: string;
+  slug: string | null;
+  accountNumber: string;
+  bankHoldersName: string;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IAddWithdrawalOptionPayload {
+  bankName: string;
+  accountNumber: string;
+  bankHoldersName: string;
+  slug: string;
+}
+
+export interface IBank {
+  id: number;
+  name: string;
+  slug: string;
+  code: string;
+  longcode: string;
+  gateway: string | null;
+  pay_with_bank: boolean;
+  supports_transfer: boolean;
+  available_for_direct_debit: boolean;
+  active: boolean;
+  country: string;
+  currency: string;
+  type: string;
+  is_deleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IAccountValidation {
+  account_number: string;
+  account_name: string;
+  bank_id: number;
+}
+
+export const withdrawalService = {
+  getAll: async () => {
+    const { data } = await AXIOS.get<IApiResponse<IWithdrawalOption[]>>(
+      "/api/v1/wallet/withdrawal-options"
+    );
+    return data;
+  },
+  add: async (payload: IAddWithdrawalOptionPayload) => {
+    const { data } = await AXIOS.post<IApiResponse<IWithdrawalOption>>(
+      "/api/v1/wallet/withdrawal-options",
+      payload
+    );
+    return data;
+  },
+  setDefault: async (id: string) => {
+    const { data } = await AXIOS.patch<IApiResponse<IWithdrawalOption>>(
+      `/api/v1/wallet/withdrawal-options/${id}/default`
+    );
+    return data;
+  },
+  delete: async (id: string) => {
+    const { data } = await AXIOS.delete<IApiResponse<{ success: boolean }>>(
+      `/api/v1/wallet/withdrawal-options/${id}`
+    );
+    return data;
+  },
+  searchBanks: async (query: string) => {
+    const { data } = await AXIOS.get<IApiResponse<IBank[]>>(
+      "/api/v1/wallet/banks",
+      { params: { query } }
+    );
+    return data;
+  },
+  validateAccount: async (accountNumber: string, bankCode: string) => {
+    const { data } = await AXIOS.get<IApiResponse<IAccountValidation>>(
+      "/api/v1/wallet/banks/validate",
+      { params: { account_number: accountNumber, bank_code: bankCode } }
+    );
+    return data;
+  },
+} as const;
+
+// Notifications
+export interface INotificationItem {
+  id: string;
+  title: string;
+  text: string;
+  userId: string;
+  redirect_to?: string | null;
+  hasSeen: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface INotificationPagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface INotificationListResponse {
+  success: boolean;
+  message: string;
+  data: INotificationItem[];
+  pagination: INotificationPagination;
+}
+
+export interface IMarkAsSeenPayload {
+  notificationIds: string[];
+}
+
+export interface IMarkAsSeenResponse {
+  success: boolean;
+  message: string;
+  data: { message: string; updatedCount: number };
+}
+
+export const notificationService = {
+  list: async (params: { page?: number; limit?: number }) => {
+    const { data } = await AXIOS.get<INotificationListResponse>(
+      "/api/v1/notification",
+      { params }
+    );
+    return data;
+  },
+  markAsSeen: async (payload: IMarkAsSeenPayload) => {
+    const { data } = await AXIOS.put<IMarkAsSeenResponse>(
+      "/api/v1/notification/mark-as-seen",
+      payload
+    );
     return data;
   },
 } as const;
