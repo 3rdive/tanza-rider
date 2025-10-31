@@ -36,7 +36,8 @@ AXIOS.interceptors.request.use(
 
       // Redact sensitive headers
       // const safeHeaders: Record<string, unknown> = { ...(headers || {}) };
-      // if (safeHeaders.Authorization) safeHeaders.Authorization = "***redacted***";
+      // if (safeHeaders.Authorization)
+      //   safeHeaders.Authorization = "***redacted***";
 
       // console.log("[Axios Request]", {
       //   baseURL: config.baseURL,
@@ -65,7 +66,7 @@ AXIOS.interceptors.request.use(
 AXIOS.interceptors.response.use(
   (response) => {
     if (isDev) {
-      const rawHeaders = response.headers as any;
+      // const rawHeaders = response.headers as any;
       // const headers =
       //   typeof rawHeaders?.toJSON === "function"
       //     ? rawHeaders.toJSON()
@@ -562,6 +563,8 @@ export interface IAssignedOrder {
   };
   eta: string;
   amount: number;
+  distanceInKm: string;
+  isUrgent: boolean;
 }
 
 export interface IRiderFeedbackPayload {

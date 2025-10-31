@@ -38,10 +38,10 @@ export default function DeliveryRequestSnackbar() {
     customerName: order.userFullName,
     pickupLocation: order.pickUpLocation.address,
     dropoffLocation: order.dropOffLocation.address,
-    distance: order.eta, // Using ETA as distance for now
+    distance: order.distanceInKm,
     estimatedEarning: order.amount,
-    packageType: "Package", // Not provided in API, using default
-    urgency: "normal" as const, // Not provided in API, using default
+    packageType: "Package", //
+    isUrgent: order.isUrgent,
     timeAgo: "Just now",
   });
 
@@ -188,10 +188,9 @@ export default function DeliveryRequestSnackbar() {
               style={[
                 styles.urgencyBadge,
                 {
-                  backgroundColor:
-                    currentRequest?.urgency === "urgent"
-                      ? "#fef3c7" // Light orange background for urgent
-                      : "#f0f9ff", // Light blue background for normal
+                  backgroundColor: currentRequest?.isUrgent
+                    ? "#fef3c7" // Light orange background for urgent
+                    : "#f0f9ff", // Light blue background for normal
                 },
               ]}
             >
@@ -199,16 +198,13 @@ export default function DeliveryRequestSnackbar() {
                 style={[
                   styles.urgencyText,
                   {
-                    color:
-                      currentRequest?.urgency === "urgent"
-                        ? "#d97706" // Dark orange text for urgent
-                        : "#0369a1", // Dark blue text for normal
+                    color: currentRequest?.isUrgent
+                      ? "#d97706" // Dark orange text for urgent
+                      : "#0369a1", // Dark blue text for normal
                   },
                 ]}
               >
-                {currentRequest?.urgency === "urgent"
-                  ? "🔥 HIGH PRIORITY"
-                  : "📦 NORMAL"}
+                {currentRequest?.isUrgent ? "🔥 HIGH PRIORITY" : "📦 NORMAL"}
               </Text>
             </View>
           </View>
@@ -235,7 +231,7 @@ export default function DeliveryRequestSnackbar() {
 
               <View style={styles.snackbarFooter}>
                 <Text style={styles.snackbarDistance}>
-                  {currentRequest.distance}
+                  {currentRequest.distance} KM
                 </Text>
                 <Text style={styles.snackbarEarning}>
                   ₦{currentRequest.estimatedEarning?.toLocaleString()}

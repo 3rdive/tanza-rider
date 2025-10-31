@@ -8,8 +8,8 @@ export interface DeliveryRequest {
   distance: string;
   estimatedEarning: number;
   packageType: string;
-  urgency: "normal" | "urgent";
   timeAgo: string;
+  isUrgent: boolean;
 }
 
 interface DeliveryRequestState {

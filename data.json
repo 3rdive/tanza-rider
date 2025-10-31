@@ -1,17 +1,19 @@
 {
-  "baseURL": "http://localhost:3030",
-  "data": "undefined",
-  "headers": {
-    "Accept": "application/json, text/plain, */*",
-    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoicmlkZXIiLCJzdWIiOiI0OTE2OWUyZS0zNjBlLTRkMWEtYWJkMi1iNDg0NWViOWQyMzIiLCJpYXQiOjE3NjExNzExNTQsImV4cCI6MTc2MTI1NzU1NH0.q2E4_Jy-c7bvXiQU_np8fegvTfK8xg5AmrOsJlhupC0",
-    "Content-Type": "undefined"
+  "amount": 3771.04,
+  "dropOffLocation": {
+    "address": "Minna, Niger State, Nigeria",
+    "latitude": "9.58660422990144",
+    "longitude": "6.5454279820259025"
   },
-  "method": "get",
-  "params": {
-    "limit": 20,
-    "orderStatus": ["accepted", "picked_up", "transit"],
-    "page": 1
+  "eta": "1 hour 8 minutes 1 second",
+  "id": "c7c72744-6681-4958-8390-d29aa00b57c3",
+  "pickUpLocation": {
+    "address": "Main Campus (Gidan Kwano)",
+    "latitude": "9.5306701",
+    "longitude": "6.4460533647098845"
   },
-  "timeout": 30000,
-  "url": "/api/v1/order/orders/rider"
+  "profilePicUrl": "",
+  "userFullName": "",
+  "userId": "46e0152c-1295-4d3d-8825-836f2d1e47f0",
+  "userMobileNumber": ""
 }
