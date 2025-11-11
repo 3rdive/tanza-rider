@@ -286,11 +286,6 @@ export default function PaymentMethodsScreen() {
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <View style={styles.methodHeader}>
                       <Text style={styles.methodType}>{method.bankName}</Text>
-                      {method.isDefault && (
-                        <View style={styles.defaultBadge}>
-                          <Text style={styles.defaultBadgeText}>Default</Text>
-                        </View>
-                      )}
                     </View>
                     <Text style={styles.methodInfo}>
                       {method.accountNumber}
@@ -339,164 +334,173 @@ export default function PaymentMethodsScreen() {
           </View>
         )}
 
-        {/* Add New Payment Method */}
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
-          Add New Payment Method
-        </Text>
-        <View style={styles.form}>
-          {/* Bank Search Autocomplete */}
-          <View style={styles.autocompleteContainer}>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                placeholder="Search Bank *"
-                style={styles.inputWithIcon}
-                value={bankSearchQuery}
-                onChangeText={(text) => {
-                  setBankSearchQuery(text);
-                  setShowBankDropdown(true);
-                  if (selectedBank && text !== selectedBank.name) {
-                    setSelectedBank(null);
-                    setAccountValidated(false);
-                    setForm({
-                      ...form,
-                      bankName: "",
-                      slug: "",
-                      bankCode: "",
-                      bankHoldersName: "",
-                    });
+        {/* Add New Payment Method - Only show if user has no payment methods */}
+        {withdrawalOptions.length === 0 && (
+          <>
+            <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
+              Add New Payment Method
+            </Text>
+            <View style={styles.form}>
+              {/* Bank Search Autocomplete */}
+              <View style={styles.autocompleteContainer}>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    placeholder="Search Bank *"
+                    style={styles.inputWithIcon}
+                    value={bankSearchQuery}
+                    onChangeText={(text) => {
+                      setBankSearchQuery(text);
+                      setShowBankDropdown(true);
+                      if (selectedBank && text !== selectedBank.name) {
+                        setSelectedBank(null);
+                        setAccountValidated(false);
+                        setForm({
+                          ...form,
+                          bankName: "",
+                          slug: "",
+                          bankCode: "",
+                          bankHoldersName: "",
+                        });
+                      }
+                    }}
+                    editable={!isSubmitting}
+                    autoCapitalize="none"
+                  />
+                  {selectedBank && (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color="#00AA66"
+                      style={styles.inputIconRight}
+                    />
+                  )}
+                  {isSearchingBanks && (
+                    <ActivityIndicator
+                      size="small"
+                      color="#00AA66"
+                      style={styles.inputIconRight}
+                    />
+                  )}
+                </View>
+
+                {/* Bank Dropdown */}
+                {showBankDropdown && bankSearchResults.length > 0 && (
+                  <View style={styles.dropdown}>
+                    <ScrollView
+                      style={styles.dropdownScroll}
+                      keyboardShouldPersistTaps="handled"
+                      nestedScrollEnabled
+                    >
+                      {bankSearchResults.map((bank) => (
+                        <TouchableOpacity
+                          key={bank.id}
+                          style={styles.dropdownItem}
+                          onPress={() => handleBankSelect(bank)}
+                        >
+                          <Text style={styles.dropdownItemText}>
+                            {bank.name}
+                          </Text>
+                          <Text style={styles.dropdownItemSubtext}>
+                            Code: {bank.code}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+
+              {/* Account Number */}
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  placeholder="Account Number *"
+                  style={styles.inputWithIcon}
+                  keyboardType="numeric"
+                  value={form.accountNumber}
+                  onChangeText={(text) => {
+                    if (text.length <= 10) {
+                      setForm({ ...form, accountNumber: text });
+                    }
+                  }}
+                  editable={
+                    !isSubmitting &&
+                    !isValidatingAccount &&
+                    selectedBank !== null
                   }
-                }}
-                editable={!isSubmitting}
-                autoCapitalize="none"
-              />
-              {selectedBank && (
-                <Ionicons
-                  name="checkmark-circle"
-                  size={20}
-                  color="#00AA66"
-                  style={styles.inputIconRight}
+                  maxLength={10}
                 />
-              )}
-              {isSearchingBanks && (
-                <ActivityIndicator
-                  size="small"
-                  color="#00AA66"
-                  style={styles.inputIconRight}
+                {isValidatingAccount && (
+                  <ActivityIndicator
+                    size="small"
+                    color="#00AA66"
+                    style={styles.inputIconRight}
+                  />
+                )}
+                {accountValidated && (
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={20}
+                    color="#00AA66"
+                    style={styles.inputIconRight}
+                  />
+                )}
+              </View>
+
+              {/* Account Holder Name (Auto-populated) */}
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  placeholder="Account Holder Name *"
+                  style={[styles.inputWithIcon, styles.inputDisabled]}
+                  value={form.bankHoldersName}
+                  editable={false}
                 />
+                {form.bankHoldersName && (
+                  <Ionicons
+                    name="lock-closed"
+                    size={16}
+                    color="#999"
+                    style={styles.inputIconRight}
+                  />
+                )}
+              </View>
+
+              {!selectedBank && (
+                <Text style={styles.helperText}>
+                  💡 Please select a bank from the search results
+                </Text>
               )}
+              {selectedBank && form.accountNumber.length < 10 && (
+                <Text style={styles.helperText}>
+                  💡 Enter your 10-digit account number
+                </Text>
+              )}
+              {selectedBank &&
+                form.accountNumber.length === 10 &&
+                !accountValidated &&
+                !isValidatingAccount && (
+                  <Text style={styles.helperTextError}>
+                    ⚠️ Account validation failed. Please check your account
+                    number.
+                  </Text>
+                )}
             </View>
 
-            {/* Bank Dropdown */}
-            {showBankDropdown && bankSearchResults.length > 0 && (
-              <View style={styles.dropdown}>
-                <ScrollView
-                  style={styles.dropdownScroll}
-                  keyboardShouldPersistTaps="handled"
-                  nestedScrollEnabled
-                >
-                  {bankSearchResults.map((bank) => (
-                    <TouchableOpacity
-                      key={bank.id}
-                      style={styles.dropdownItem}
-                      onPress={() => handleBankSelect(bank)}
-                    >
-                      <Text style={styles.dropdownItemText}>{bank.name}</Text>
-                      <Text style={styles.dropdownItemSubtext}>
-                        Code: {bank.code}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-
-          {/* Account Number */}
-          <View style={styles.inputWrapper}>
-            <TextInput
-              placeholder="Account Number *"
-              style={styles.inputWithIcon}
-              keyboardType="numeric"
-              value={form.accountNumber}
-              onChangeText={(text) => {
-                if (text.length <= 10) {
-                  setForm({ ...form, accountNumber: text });
-                }
-              }}
-              editable={
-                !isSubmitting && !isValidatingAccount && selectedBank !== null
-              }
-              maxLength={10}
-            />
-            {isValidatingAccount && (
-              <ActivityIndicator
-                size="small"
-                color="#00AA66"
-                style={styles.inputIconRight}
-              />
-            )}
-            {accountValidated && (
-              <Ionicons
-                name="checkmark-circle"
-                size={20}
-                color="#00AA66"
-                style={styles.inputIconRight}
-              />
-            )}
-          </View>
-
-          {/* Account Holder Name (Auto-populated) */}
-          <View style={styles.inputWrapper}>
-            <TextInput
-              placeholder="Account Holder Name *"
-              style={[styles.inputWithIcon, styles.inputDisabled]}
-              value={form.bankHoldersName}
-              editable={false}
-            />
-            {form.bankHoldersName && (
-              <Ionicons
-                name="lock-closed"
-                size={16}
-                color="#999"
-                style={styles.inputIconRight}
-              />
-            )}
-          </View>
-
-          {!selectedBank && (
-            <Text style={styles.helperText}>
-              💡 Please select a bank from the search results
-            </Text>
-          )}
-          {selectedBank && form.accountNumber.length < 10 && (
-            <Text style={styles.helperText}>
-              💡 Enter your 10-digit account number
-            </Text>
-          )}
-          {selectedBank &&
-            form.accountNumber.length === 10 &&
-            !accountValidated &&
-            !isValidatingAccount && (
-              <Text style={styles.helperTextError}>
-                ⚠️ Account validation failed. Please check your account number.
-              </Text>
-            )}
-        </View>
-
-        <TouchableOpacity
-          style={[
-            styles.confirmBtn,
-            (!isFormValid || isSubmitting) && styles.confirmBtnDisabled,
-          ]}
-          onPress={handleConfirm}
-          disabled={!isFormValid || isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.confirmText}>Add Payment Method</Text>
-          )}
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.confirmBtn,
+                (!isFormValid || isSubmitting) && styles.confirmBtnDisabled,
+              ]}
+              onPress={handleConfirm}
+              disabled={!isFormValid || isSubmitting}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.confirmText}>Add Payment Method</Text>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
       </>
     );
   };

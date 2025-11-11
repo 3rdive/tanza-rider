@@ -20,6 +20,7 @@ type Props = {
   onClose: () => void;
   user?: User | null;
   onSubmit?: (payload: { rating: number; comments: string[] }) => void;
+  onCancel?: () => void;
 };
 
 const POSITIVE = [
@@ -44,6 +45,7 @@ export default function ReviewBottomSheet({
   onClose,
   user,
   onSubmit,
+  onCancel,
 }: Props) {
   const [rating, setRating] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
@@ -64,6 +66,8 @@ export default function ReviewBottomSheet({
   const submit = () => {
     onSubmit && onSubmit({ rating, comments: selected });
   };
+
+  const isSubmitDisabled = rating === 0 || selected.length === 0;
 
   return (
     <Modal
@@ -161,14 +165,28 @@ export default function ReviewBottomSheet({
             </View>
 
             <TouchableOpacity
-              style={styles.submitBtn}
+              style={[
+                styles.submitBtn,
+                isSubmitDisabled && styles.submitBtnDisabled,
+              ]}
               onPress={submit}
               activeOpacity={0.8}
+              disabled={isSubmitDisabled}
             >
-              <Text style={styles.submitText}>Submit review</Text>
+              <Text
+                style={[
+                  styles.submitText,
+                  isSubmitDisabled && styles.submitTextDisabled,
+                ]}
+              >
+                Submit review
+              </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+            <TouchableOpacity
+              style={styles.closeBtn}
+              onPress={onCancel ? onCancel : onClose}
+            >
               <Text style={styles.closeText}>Cancel</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -234,7 +252,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 12,
   },
+  submitBtnDisabled: {
+    backgroundColor: "#ccc",
+    opacity: 0.6,
+  },
   submitText: { color: "#fff", fontWeight: "700" },
+  submitTextDisabled: {
+    color: "#999",
+  },
   closeBtn: { alignItems: "center", marginTop: 10 },
   closeText: { color: "#666" },
 });

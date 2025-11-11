@@ -9,6 +9,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "./slices/authSlice";
 import locationSearchReducer from "./slices/locationSearchSlice";
 import alertReducer from "./slices/alertSlice";
+import activeOrdersReducer from "./slices/activeOrdersSlice";
 
 export const store = configureStore({
   reducer: {
@@ -21,6 +22,7 @@ export const store = configureStore({
     locationSearch: locationSearchReducer,
     deliveryRequest: deliveryRequestReducer,
     rider: riderReducer,
+    activeOrders: activeOrdersReducer,
   },
 });
 

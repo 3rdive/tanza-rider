@@ -4,6 +4,7 @@ import { riderService, RiderActiveStatus } from "@/lib/api";
 import { useDeviceLocation } from "@/hooks/location.hook";
 import { useUser } from "../redux/hooks/hooks";
 import { io } from "socket.io-client";
+import { createSocket } from "@/lib/socket";
 
 type ReturnType = {
   status: RiderActiveStatus | null;
@@ -53,12 +54,7 @@ export function useRiderActiveStatus(): ReturnType {
     // Guard: don't open a socket until we have an authenticated user
     if (!user?.id || !access_token) return;
 
-    const socket = io(process.env.EXPO_PUBLIC_SOCKET_URL, {
-      auth: {
-        token: `Bearer ${access_token}`,
-        userId: user.id,
-      },
-    });
+    const socket = createSocket({ token: access_token });
 
     socket.on("connect", () => {
       console.log("Socket connected:", socket.id);

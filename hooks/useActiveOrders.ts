@@ -1,34 +1,32 @@
-import { useState, useCallback, useEffect } from "react";
-import { orderService, IActiveOrder } from "@/lib/api";
+import { useCallback, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/redux/store";
+import {
+  fetchActiveOrders,
+  selectActiveOrders,
+  selectActiveOrdersError,
+  selectActiveOrdersLoading,
+} from "@/redux/slices/activeOrdersSlice";
 
 export const useActiveOrders = () => {
-  const [activeOrders, setActiveOrders] = useState<IActiveOrder[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const dispatch = useDispatch<AppDispatch>();
+  const activeOrders = useSelector(selectActiveOrders);
+  const loading = useSelector(selectActiveOrdersLoading);
+  const error = useSelector(selectActiveOrdersError);
 
-  const fetchActiveOrders = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await orderService.getActiveOrders();
-      setActiveOrders(response.data || []);
-    } catch (err: any) {
-      console.error("Error fetching active orders:", err);
-      setError(err?.response?.data?.message || "Failed to fetch active orders");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const refetch = useCallback(() => {
+    dispatch(fetchActiveOrders());
+  }, [dispatch]);
 
   // Automatically fetch on mount
   useEffect(() => {
-    fetchActiveOrders();
-  }, [fetchActiveOrders]);
+    refetch();
+  }, [refetch]);
 
   return {
     activeOrders,
     loading,
     error,
-    refetch: fetchActiveOrders,
+    refetch,
   };
 };

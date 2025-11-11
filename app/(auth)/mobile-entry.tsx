@@ -44,7 +44,7 @@ const SpotifyCreateAccount = () => {
       const exists = await authService.userExistsByMobile(phoneNumber);
       if (exists) {
         showAlert(
-          "Mobile Already Registered",
+          "Error",
           "This mobile number is already associated with an account. Please sign in or use a different number.",
           [
             { text: "Cancel", style: "cancel" },

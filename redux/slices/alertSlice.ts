@@ -2,12 +2,19 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 type AlertType = "success" | "error" | "warning";
 
+type AlertButton = {
+  text: string;
+  style?: "default" | "cancel" | "destructive" | "warn";
+  onclick?: () => void;
+};
+
 type AlertState = {
   visible: boolean;
   heading?: string;
   message?: string;
   type?: AlertType;
   duration?: number | null; // ms, null means do not auto-dismiss
+  buttons?: AlertButton[];
 };
 
 const initialState: AlertState = {
@@ -16,6 +23,7 @@ const initialState: AlertState = {
   message: undefined,
   type: "success",
   duration: 4000,
+  buttons: undefined,
 };
 
 const alertSlice = createSlice({
@@ -29,14 +37,16 @@ const alertSlice = createSlice({
         message?: string;
         type?: AlertType;
         duration?: number | null;
+        buttons?: AlertButton[];
       }>
     ) => {
-      const { heading, message, type, duration } = action.payload;
+      const { heading, message, type, duration, buttons } = action.payload;
       state.visible = true;
       state.heading = heading;
       state.message = message;
       state.type = type ?? inferTypeFromHeading(heading) ?? "success";
       state.duration = duration ?? 4000;
+      state.buttons = buttons;
     },
     hideAlert: (state) => {
       state.visible = false;
@@ -64,7 +74,7 @@ function inferTypeFromHeading(heading?: string): AlertType | undefined {
     return "error";
 
   // Warning patterns
-  if (h.includes("warn") || h.includes("caution")) return "warning";
+  if (h.includes("warn") || h.includes("permission") || h.includes("caution")) return "warning";
 
   // Success patterns
   if (
@@ -84,3 +94,4 @@ function inferTypeFromHeading(heading?: string): AlertType | undefined {
 
 export const { showAlert, hideAlert } = alertSlice.actions;
 export default alertSlice.reducer;
+export type { AlertButton };

@@ -1,6 +1,6 @@
 // CompleteInfoScreen.tsx
 import { authService, storageService } from "@/lib/api";
-import { rs, showAlert } from "@/lib/functions";
+import { rs, showAlert, showPermissionAlert } from "@/lib/functions";
 import { useAuthFlow, useUser } from "@/redux/hooks/hooks";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -135,9 +135,10 @@ export default function CompleteInfoScreen() {
                   const perm =
                     await ImagePicker.requestMediaLibraryPermissionsAsync();
                   if (perm.status !== "granted") {
-                    showAlert(
+                    showPermissionAlert(
                       "Permission needed",
-                      "We need access to your photos to select a profile picture."
+                      "We need access to your photos to select a profile picture.",
+                      "photos"
                     );
                     return;
                   }
@@ -152,7 +153,7 @@ export default function CompleteInfoScreen() {
                   if (!uri) return;
                   // Optimistic: show a local image while uploading
                   // We'll upload and replace with the server URL when done
-                  const timer = setTimeout(() => {}, 400);
+                  const timer = setTimeout(() => { }, 400);
                   setIsUploading(true);
                   const resp = await storageService.upload({
                     uri,
@@ -173,8 +174,8 @@ export default function CompleteInfoScreen() {
                   showAlert(
                     "Upload Error",
                     e?.response?.data?.message ||
-                      e?.message ||
-                      "Unable to upload image"
+                    e?.message ||
+                    "Unable to upload image"
                   );
                 } finally {
                   setIsUploading(false);

@@ -1,4 +1,3 @@
-import React, { useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,12 +6,20 @@ import {
   Animated,
   ActivityIndicator,
 } from "react-native";
+import * as Haptics from "expo-haptics";
 import { useDeliveryRequest } from "@/hooks/useDeliveryRequest";
 import { useAssignedOrders } from "@/hooks/useAssignedOrders";
 import { IAssignedOrder } from "@/lib/api";
 import { useRiderActiveStatus } from "@/hooks/useRiderActiveStatus";
+import { useAudioPlayer } from "expo-audio";
+import sound from "@/assets/sounds/notification.wav";
+import { useActiveOrders } from "@/hooks/useActiveOrders";
+import { Ionicons } from "@expo/vector-icons";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function DeliveryRequestSnackbar() {
+  const player = useAudioPlayer(sound);
+
   const {
     showDeliveryModal,
     currentRequest,
@@ -20,6 +27,7 @@ export default function DeliveryRequestSnackbar() {
     acceptDeliveryRequest,
     declineDeliveryRequest,
   } = useDeliveryRequest();
+  const { refetch } = useActiveOrders();
   const { isActive } = useRiderActiveStatus();
   const {
     assignedOrders,
@@ -31,19 +39,158 @@ export default function DeliveryRequestSnackbar() {
   } = useAssignedOrders();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const processedOrdersRef = useRef(new Set<string>());
+  const handlingRequestRef = useRef(false);
+  const [timeLeft, setTimeLeft] = useState(30);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoDeclineTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   // Convert IAssignedOrder to the format expected by useDeliveryRequest
-  const convertToRequestFormat = (order: IAssignedOrder) => ({
-    id: order.id,
-    customerName: order.userFullName,
-    pickupLocation: order.pickUpLocation.address,
-    dropoffLocation: order.dropOffLocation.address,
-    distance: order.distanceInKm,
-    estimatedEarning: order.amount,
-    packageType: "Package", //
-    isUrgent: order.isUrgent,
-    timeAgo: "Just now",
-  });
+  const convertToRequestFormat = useCallback(
+    (order: IAssignedOrder) => ({
+      id: order.id,
+      customerName: order.userFullName,
+      pickupLocation: order.pickUpLocation.address,
+      dropoffLocation: order.dropOffLocation.address,
+      distance: order.distanceInKm,
+      estimatedEarning: order.amount,
+      packageType: "Package", //
+      isUrgent: order.isUrgent,
+      timeAgo: "Just now",
+    }),
+    []
+  );
+
+  // Clear timer when component unmounts or request is handled
+  const clearTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (autoDeclineTimeoutRef.current) {
+      clearTimeout(autoDeclineTimeoutRef.current);
+      autoDeclineTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Trigger notification (vibration and haptic feedback)
+  const triggerNotification = useCallback(async () => {
+    try {
+      player.seekTo(0); // Reset to start if needed
+      player.play();
+    } catch (error) {
+      console.log("Notification error:", error);
+    }
+  }, [player]);
+
+  // Start 30-second auto-decline timer
+  const startTimer = useCallback(() => {
+    handlingRequestRef.current = false;
+    setTimeLeft(30);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        const newTime = prev - 1;
+        if (newTime <= 0) {
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
+          return 0;
+        }
+        return newTime;
+      });
+    }, 1000);
+  }, []);
+
+  const handleDecline = useCallback(async () => {
+    if (!currentRequest || handlingRequestRef.current) return;
+
+    handlingRequestRef.current = true;
+    clearTimer();
+
+    const result = await declineOrder(currentRequest.id);
+
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      declineDeliveryRequest();
+      handlingRequestRef.current = false;
+    });
+
+    if (!result.success) {
+      console.error("Failed to decline order:", result.message);
+    }
+
+    // Show next order if available
+    setTimeout(() => {
+      if (isActive && assignedOrders.length > 0) {
+        const nextOrder = assignedOrders.find(
+          (order) => !processedOrdersRef.current.has(order.id)
+        );
+        if (nextOrder) {
+          processedOrdersRef.current.add(nextOrder.id);
+          showDeliveryRequest(convertToRequestFormat(nextOrder));
+          triggerNotification();
+          fadeAnim.setValue(0);
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }).start();
+          startTimer();
+        }
+      }
+    }, 2000);
+  }, [
+    currentRequest,
+    handlingRequestRef,
+    clearTimer,
+    declineOrder,
+    fadeAnim,
+    declineDeliveryRequest,
+    isActive,
+    assignedOrders,
+    showDeliveryRequest,
+    convertToRequestFormat,
+    triggerNotification,
+    startTimer,
+  ]);
+
+  // Auto-decline when timer reaches 0
+  useEffect(() => {
+    if (!showDeliveryModal || timeLeft > 0 || handlingRequestRef.current) {
+      return;
+    }
+
+    if (autoDeclineTimeoutRef.current) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      autoDeclineTimeoutRef.current = null;
+      handleDecline();
+    }, 0);
+    autoDeclineTimeoutRef.current = timeoutId;
+
+    return () => {
+      if (autoDeclineTimeoutRef.current === timeoutId) {
+        clearTimeout(timeoutId);
+        autoDeclineTimeoutRef.current = null;
+      }
+    };
+  }, [timeLeft, showDeliveryModal, handleDecline]);
+
+  // Clear timer on unmount
+  useEffect(() => {
+    return () => clearTimer();
+  }, [clearTimer]);
 
   // Show delivery request when new order is received via WebSocket
   useEffect(() => {
@@ -54,6 +201,7 @@ export default function DeliveryRequestSnackbar() {
     ) {
       processedOrdersRef.current.add(newOrderReceived.id);
       showDeliveryRequest(convertToRequestFormat(newOrderReceived));
+      triggerNotification();
       fadeAnim.setValue(0);
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -61,6 +209,7 @@ export default function DeliveryRequestSnackbar() {
         useNativeDriver: true,
       }).start();
       clearNewOrder();
+      startTimer();
     }
   }, [
     newOrderReceived,
@@ -68,6 +217,9 @@ export default function DeliveryRequestSnackbar() {
     fadeAnim,
     showDeliveryRequest,
     clearNewOrder,
+    startTimer,
+    convertToRequestFormat,
+    triggerNotification,
   ]);
 
   // Show first assigned order on mount if online
@@ -81,12 +233,14 @@ export default function DeliveryRequestSnackbar() {
       const firstOrder = assignedOrders[0];
       processedOrdersRef.current.add(firstOrder.id);
       showDeliveryRequest(convertToRequestFormat(firstOrder));
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       fadeAnim.setValue(0);
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 300,
         useNativeDriver: true,
       }).start();
+      startTimer();
     }
   }, [
     isActive,
@@ -94,69 +248,31 @@ export default function DeliveryRequestSnackbar() {
     showDeliveryModal,
     fadeAnim,
     showDeliveryRequest,
+    convertToRequestFormat,
+    startTimer,
   ]);
 
   const handleAcceptRequest = async () => {
     if (!currentRequest) return;
 
-    // Call API to accept order
+    handlingRequestRef.current = true;
+    clearTimer();
     const result = await acceptOrder(currentRequest.id);
 
-    // Animate out
     Animated.timing(fadeAnim, {
       toValue: 0,
       duration: 200,
       useNativeDriver: true,
     }).start(() => {
       acceptDeliveryRequest();
+      handlingRequestRef.current = false;
     });
 
-    // Show feedback to user
+    refetch();
+
     if (!result.success) {
-      // You can show an alert here if needed
       console.error("Failed to accept order:", result.message);
     }
-  };
-
-  const handleDeclineRequest = async () => {
-    if (!currentRequest) return;
-
-    // Call API to decline order
-    const result = await declineOrder(currentRequest.id);
-
-    // Animate out
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
-      declineDeliveryRequest();
-    });
-
-    // Show feedback to user
-    if (!result.success) {
-      console.error("Failed to decline order:", result.message);
-    }
-
-    // Show next assigned order after delay if still online
-    setTimeout(() => {
-      if (isActive && assignedOrders.length > 0) {
-        // Find next unprocessed order
-        const nextOrder = assignedOrders.find(
-          (order) => !processedOrdersRef.current.has(order.id)
-        );
-        if (nextOrder) {
-          processedOrdersRef.current.add(nextOrder.id);
-          showDeliveryRequest(convertToRequestFormat(nextOrder));
-          fadeAnim.setValue(0);
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-          }).start();
-        }
-      }
-    }, 2000);
   };
 
   if (!showDeliveryModal) {
@@ -184,28 +300,44 @@ export default function DeliveryRequestSnackbar() {
         <View style={styles.snackbarContent}>
           <View style={styles.snackbarHeader}>
             <Text style={styles.snackbarTitle}>New Delivery Request</Text>
-            <View
-              style={[
-                styles.urgencyBadge,
-                {
-                  backgroundColor: currentRequest?.isUrgent
-                    ? "#fef3c7" // Light orange background for urgent
-                    : "#f0f9ff", // Light blue background for normal
-                },
-              ]}
-            >
-              <Text
+            <View style={styles.headerRight}>
+              <TouchableOpacity
+                style={styles.timerButton}
+                onPress={handleDecline}
+                disabled={!!processingOrderId}
+                activeOpacity={0.7}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              >
+                <Ionicons name="time" size={14} color="#fff" />
+                <Text style={styles.timerText}>{timeLeft}s</Text>
+                <Ionicons
+                  name="close"
+                  size={14}
+                  color="#fff"
+                  style={{ marginLeft: 6 }}
+                />
+              </TouchableOpacity>
+              <View
                 style={[
-                  styles.urgencyText,
+                  styles.urgencyBadge,
                   {
-                    color: currentRequest?.isUrgent
-                      ? "#d97706" // Dark orange text for urgent
-                      : "#0369a1", // Dark blue text for normal
+                    backgroundColor: currentRequest?.isUrgent
+                      ? "#fef3c7"
+                      : "#f0f9ff",
                   },
                 ]}
               >
-                {currentRequest?.isUrgent ? "🔥 HIGH PRIORITY" : "📦 NORMAL"}
-              </Text>
+                <Text
+                  style={[
+                    styles.urgencyText,
+                    {
+                      color: currentRequest?.isUrgent ? "#d97706" : "#0369a1",
+                    },
+                  ]}
+                >
+                  {currentRequest?.isUrgent ? "🔥 HIGH PRIORITY" : "📦 NORMAL"}
+                </Text>
+              </View>
             </View>
           </View>
 
@@ -241,21 +373,7 @@ export default function DeliveryRequestSnackbar() {
               <View style={styles.snackbarActions}>
                 <TouchableOpacity
                   style={[
-                    styles.snackbarDeclineButton,
-                    processingOrderId && styles.snackbarButtonDisabled,
-                  ]}
-                  onPress={handleDeclineRequest}
-                  disabled={!!processingOrderId}
-                >
-                  {processingOrderId === currentRequest?.id ? (
-                    <ActivityIndicator size="small" color="#FF3B30" />
-                  ) : (
-                    <Text style={styles.snackbarDeclineText}>Decline</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.snackbarAcceptButton,
+                    styles.acceptCtaButton,
                     processingOrderId && styles.snackbarButtonDisabled,
                   ]}
                   onPress={handleAcceptRequest}
@@ -264,7 +382,7 @@ export default function DeliveryRequestSnackbar() {
                   {processingOrderId === currentRequest?.id ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text style={styles.snackbarAcceptText}>Accept</Text>
+                    <Text style={styles.acceptCtaText}>Accept</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -290,14 +408,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: "rgba(0, 0, 0, 0.6)",
     justifyContent: "flex-end",
-    zIndex: 1000, // Ensure it appears above tab content
+    zIndex: 1000,
   },
   snackbarContainer: {
-    backgroundColor: "#fff", // White background for light mode
+    backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.25,
@@ -306,7 +422,7 @@ const styles = StyleSheet.create({
   },
   snackbarContent: {
     padding: 24,
-    paddingBottom: 40, // Extra bottom padding for safe area
+    paddingBottom: 40,
   },
   snackbarHeader: {
     flexDirection: "row",
@@ -317,7 +433,7 @@ const styles = StyleSheet.create({
   snackbarTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#000", // Dark text for light mode
+    color: "#000",
   },
   snackbarDetails: {
     marginBottom: 16,
@@ -325,19 +441,19 @@ const styles = StyleSheet.create({
   snackbarCustomerName: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#000", // Dark text for light mode
+    color: "#000",
     marginBottom: 4,
   },
   snackbarPackageType: {
     fontSize: 14,
-    color: "#666", // Medium gray for light mode
+    color: "#666",
   },
   snackbarLocations: {
     marginBottom: 16,
   },
   snackbarLocationText: {
     fontSize: 14,
-    color: "#333", // Dark gray for light mode
+    color: "#333",
     marginBottom: 6,
     lineHeight: 20,
   },
@@ -349,7 +465,7 @@ const styles = StyleSheet.create({
   },
   snackbarDistance: {
     fontSize: 18,
-    color: "#666", // Medium gray for light mode
+    color: "#666",
   },
   snackbarEarning: {
     fontSize: 25,
@@ -358,36 +474,11 @@ const styles = StyleSheet.create({
   },
   snackbarActions: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "space-around",
+    paddingTop: 10,
   },
   snackbarButtonDisabled: {
     opacity: 0.5,
-  },
-  snackbarDeclineButton: {
-    flex: 1,
-    backgroundColor: "#f3f4f6", // Light gray button for light mode
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    marginRight: 8,
-  },
-  snackbarDeclineText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#6b7280", // Dark gray text for light mode
-  },
-  snackbarAcceptButton: {
-    flex: 1,
-    backgroundColor: "#00B624", // Keep green accent
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    marginLeft: 8,
-  },
-  snackbarAcceptText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#fff",
   },
   snackbarLoadingState: {
     alignItems: "center",
@@ -395,7 +486,7 @@ const styles = StyleSheet.create({
   },
   snackbarLoadingText: {
     fontSize: 16,
-    color: "#666", // Dark gray for light mode
+    color: "#666",
     marginBottom: 12,
   },
   urgencyBadge: {
@@ -406,5 +497,64 @@ const styles = StyleSheet.create({
   urgencyText: {
     fontSize: 12,
     fontWeight: "600",
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  timerContainer: {
+    backgroundColor: "#FF3B30",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 40,
+    alignItems: "center",
+  },
+  timerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FF3B30",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    minWidth: 64,
+    gap: 6,
+  },
+  timerText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  iconButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  declineButton: {
+    backgroundColor: "#FF3B30",
+  },
+  acceptButton: {
+    backgroundColor: "#34C759",
+  },
+  acceptCtaButton: {
+    backgroundColor: "#34C759",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+  },
+  acceptCtaText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#fff",
   },
 });

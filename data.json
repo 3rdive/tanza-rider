@@ -1,19 +1,33 @@
 {
-  "amount": 3771.04,
+  "amount": 1684.8,
+  "createdAt": "2025-11-11T00:13:42.196Z",
   "dropOffLocation": {
-    "address": "Minna, Niger State, Nigeria",
-    "latitude": "9.58660422990144",
-    "longitude": "6.5454279820259025"
+    "address": "Chapel of Grace Federal University of Technology, Minna, Bosso Campus.",
+    "latitude": "9.6558647",
+    "longitude": "6.5233307"
   },
-  "eta": "1 hour 8 minutes 1 second",
-  "id": "c7c72744-6681-4958-8390-d29aa00b57c3",
+  "eta": "1 hour 12 minutes 47 seconds",
+  "note": "",
+  "orderId": "6ecc32a2-55d9-4825-8a24-e64ca6cf54e2",
+  "orderTracking": [
+    {
+      "createdAt": "2025-11-11T00:13:42.196Z",
+      "id": "d334fc45-5d6b-4e9e-bb4a-c9db10a14951",
+      "status": "pending"
+    },
+    {
+      "createdAt": "2025-11-11T00:13:49.001Z",
+      "id": "b1e24b95-d021-473b-97ac-1ddfcba41889",
+      "status": "accepted"
+    }
+  ],
   "pickUpLocation": {
     "address": "Main Campus (Gidan Kwano)",
     "latitude": "9.5306701",
     "longitude": "6.4460533647098845"
   },
-  "profilePicUrl": "",
-  "userFullName": "",
-  "userId": "46e0152c-1295-4d3d-8825-836f2d1e47f0",
-  "userMobileNumber": ""
+  "profilePicUrl": "http://localhost:3030/api/v1/storage-media/97d78632-ace3-4edc-ba9f-41b855b14110.jpg",
+  "userFullName": "Remi Abiodun",
+  "userId": "744185eb-cb73-4ed4-b0a6-c27319103caa",
+  "userMobileNumber": "8050223371"
 }

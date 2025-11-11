@@ -3,11 +3,10 @@ import { orderService, IAssignedOrder } from "@/lib/api";
 import { createSocket } from "@/lib/socket";
 import { Socket } from "socket.io-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useActiveOrders } from "@/hooks/useActiveOrders";
 import { useUser } from "../redux/hooks/hooks";
+import { Alert } from "react-native";
 
 export const useAssignedOrders = () => {
-  const { refetch: refetchActiveOrders } = useActiveOrders();
   const { user, access_token } = useUser();
   const [assignedOrders, setAssignedOrders] = useState<IAssignedOrder[]>([]);
   const [loading, setLoading] = useState(false);
@@ -127,7 +126,7 @@ export const useAssignedOrders = () => {
           // Remove from assigned orders list
           removeOrder(orderId);
           // Refetch active orders to show the newly accepted order
-          refetchActiveOrders();
+          // refetchActiveOrders();
           return { success: true, message: response.message };
         } else {
           throw new Error(response.message || "Failed to accept order");
@@ -142,7 +141,7 @@ export const useAssignedOrders = () => {
         setProcessingOrderId(null);
       }
     },
-    [removeOrder, refetchActiveOrders]
+    [removeOrder]
   );
 
   // Decline an order
@@ -159,7 +158,7 @@ export const useAssignedOrders = () => {
         if (response.success) {
           // Remove from assigned orders list
           removeOrder(orderId);
-          refetchActiveOrders();
+          // refetchActiveOrders();
 
           return { success: true, message: response.message };
         } else {
@@ -175,7 +174,7 @@ export const useAssignedOrders = () => {
         setProcessingOrderId(null);
       }
     },
-    [removeOrder, refetchActiveOrders]
+    [removeOrder]
   );
 
   return {

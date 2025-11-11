@@ -71,7 +71,6 @@ AXIOS.interceptors.response.use(
       //   typeof rawHeaders?.toJSON === "function"
       //     ? rawHeaders.toJSON()
       //     : rawHeaders;
-
       // console.log("[Axios Response]", {
       //   method: response.config?.method,
       //   url: response.config?.url,
@@ -532,6 +531,8 @@ export interface IActiveOrder {
   userMobileNumber: string;
   profilePicUrl: string;
   amount: number;
+  eta: string;
+  createdAt: string;
   pickUpLocation: {
     address: string;
     latitude: string;
@@ -967,6 +968,83 @@ export const notificationService = {
   markAsSeen: async (payload: IMarkAsSeenPayload) => {
     const { data } = await AXIOS.put<IMarkAsSeenResponse>(
       "/api/v1/notification/mark-as-seen",
+      payload
+    );
+    return data;
+  },
+} as const;
+
+// Tasks
+export type TaskCategory = "request_review" | string;
+export type TaskStatus = "pending" | "completed" | "cancelled";
+
+export interface ITaskReference {
+  userId: string;
+  profilePic: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface ITask {
+  id: string;
+  category: TaskCategory;
+  status: TaskStatus;
+  userId: string;
+  reference: string; // JSON string containing ITaskReference
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export interface ITaskPagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ITaskListResponse {
+  success: boolean;
+  message: string;
+  data: ITask[];
+  pagination: ITaskPagination;
+}
+
+export interface IRateUserPayload {
+  targetUserId: string;
+  starRating: number;
+  comment: string;
+}
+
+export const taskService = {
+  getTasks: async (params: {
+    status?: TaskStatus;
+    page?: number;
+    limit?: number;
+  }) => {
+    const { data } = await AXIOS.get<ITaskListResponse>("/api/v1/task", {
+      params,
+    });
+    return data;
+  },
+  completeTask: async (taskId: string) => {
+    const { data } = await AXIOS.patch<IApiResponse<ITask>>(
+      `/api/v1/task/${taskId}/complete`
+    );
+    return data;
+  },
+  cancelTask: async (taskId: string) => {
+    const { data } = await AXIOS.patch<IApiResponse<ITask>>(
+      `/api/v1/task/${taskId}/cancel`
+    );
+    return data;
+  },
+} as const;
+
+// Ratings
+export const ratingService = {
+  rateUser: async (payload: IRateUserPayload) => {
+    const { data } = await AXIOS.post<IApiResponse<any>>(
+      "/api/v1/ratings/rate",
       payload
     );
     return data;

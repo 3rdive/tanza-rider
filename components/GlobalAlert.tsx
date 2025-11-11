@@ -90,24 +90,59 @@ export default function GlobalAlert() {
           {/* Message */}
           {alert.message && <Text style={styles.message}>{alert.message}</Text>}
 
-          {/* Primary Action Button */}
-          <TouchableOpacity
-            style={[
-              styles.primaryBtn,
-              { backgroundColor: theme.primaryButtonBg },
-            ]}
-            onPress={() => dispatch(hideAlert())}
-            activeOpacity={0.8}
-          >
-            <Text
-              style={[
-                styles.primaryBtnText,
-                { color: theme.primaryButtonText },
-              ]}
-            >
-              {alert.type === "error" ? "Try Again" : "Okay"}
-            </Text>
-          </TouchableOpacity>
+          {/* Action Buttons */}
+          <View style={styles.buttonContainer}>
+            {alert.buttons && alert.buttons.length > 0 ? (
+              // Custom buttons
+              alert.buttons.map((button, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.customBtn,
+                    button.style === "cancel" && styles.cancelBtn,
+                    button.style === "destructive" && styles.destructiveBtn,
+                    button.style === "warn" && styles.warnBtn,
+                    alert.buttons!.length === 1 && styles.singleBtn,
+                  ]}
+                  onPress={() => {
+                    dispatch(hideAlert());
+                    button.onclick?.();
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.customBtnText,
+                      button.style === "cancel" && styles.cancelBtnText,
+                      button.style === "destructive" && styles.destructiveBtnText,
+                      button.style === "warn" && styles.warnBtnText,
+                    ]}
+                  >
+                    {button.text}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              // Default button
+              <TouchableOpacity
+                style={[
+                  styles.primaryBtn,
+                  { backgroundColor: theme.primaryButtonBg },
+                ]}
+                onPress={() => dispatch(hideAlert())}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.primaryBtnText,
+                    { color: theme.primaryButtonText },
+                  ]}
+                >
+                  {alert.type === "error" ? "Try Again" : "Okay"}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
     </Modal>
@@ -183,5 +218,50 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "600",
     letterSpacing: 0.3,
+  },
+  buttonContainer: {
+    width: "100%",
+    marginTop: 8,
+  },
+  customBtn: {
+    width: "100%",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    backgroundColor: "#10B981", // Default green
+  },
+  singleBtn: {
+    marginBottom: 0,
+  },
+  cancelBtn: {
+    backgroundColor: "#6B7280",
+  },
+  destructiveBtn: {
+    backgroundColor: "#EF4444",
+  },
+  warnBtn: {
+    backgroundColor: "#F59E0B",
+  },
+  customBtnText: {
+    fontSize: 17,
+    fontWeight: "600",
+    letterSpacing: 0.3,
+    color: "#FFFFFF",
+  },
+  cancelBtnText: {
+    color: "#FFFFFF",
+  },
+  destructiveBtnText: {
+    color: "#FFFFFF",
+  },
+  warnBtnText: {
+    color: "#FFFFFF",
   },
 });

@@ -7,8 +7,6 @@ import {
   Animated,
   Image,
   ActivityIndicator,
-  Modal,
-  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { IActiveOrder } from "@/lib/api";
@@ -39,39 +37,74 @@ export default function ActiveDeliveryCard({
   updatingStatus = false,
 }: Props) {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [showNoteModal, setShowNoteModal] = useState(false);
-  const [hasViewedNote, setHasViewedNote] = useState(false);
   const animatedHeight = useRef(new Animated.Value(1)).current;
   const animatedOpacity = useRef(new Animated.Value(1)).current;
   const animatedRotation = useRef(new Animated.Value(1)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [timeRemaining, setTimeRemaining] = useState<string>("");
+  const [isLate, setIsLate] = useState(false);
 
-  // Start pulsing animation for "View Note" button
-  useEffect(() => {
-    if (activeOrder?.note && !hasViewedNote) {
-      const pulse = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.08,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-      pulse.start();
-      return () => pulse.stop();
-    }
-  }, [activeOrder?.note, hasViewedNote, pulseAnim]);
+  console.log("ActiveDeliveryCard render - status:", activeOrder);
 
-  const handleViewNote = () => {
-    setShowNoteModal(true);
-    setHasViewedNote(true);
+  // Parse ETA string like "1 hour 12 minutes 47 seconds" to milliseconds
+  const parseEtaToMs = (etaString: string): number => {
+    let totalMs = 0;
+    const hourMatch = etaString.match(/(\d+)\s*hour/);
+    const minuteMatch = etaString.match(/(\d+)\s*minute/);
+    const secondMatch = etaString.match(/(\d+)\s*second/);
+
+    if (hourMatch) totalMs += parseInt(hourMatch[1]) * 60 * 60 * 1000;
+    if (minuteMatch) totalMs += parseInt(minuteMatch[1]) * 60 * 1000;
+    if (secondMatch) totalMs += parseInt(secondMatch[1]) * 1000;
+
+    return totalMs;
   };
+
+  // Format milliseconds to human-readable time
+  const formatTimeRemaining = (ms: number): string => {
+    const absMs = Math.abs(ms);
+    const hours = Math.floor(absMs / (1000 * 60 * 60));
+    const minutes = Math.floor((absMs % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((absMs % (1000 * 60)) / 1000);
+
+    const parts = [];
+    if (hours > 0) parts.push(`${hours} hour${hours !== 1 ? "s" : ""}`);
+    if (minutes > 0) parts.push(`${minutes} minute${minutes !== 1 ? "s" : ""}`);
+    if (seconds > 0 || parts.length === 0)
+      parts.push(`${seconds} second${seconds !== 1 ? "s" : ""}`);
+
+    return parts.join(" ");
+  };
+
+  // Update countdown timer
+  useEffect(() => {
+    if (!activeOrder || !activeOrder.eta || !activeOrder.createdAt) {
+      return;
+    }
+
+    const updateTimer = () => {
+      const createdAt = new Date(activeOrder.createdAt).getTime();
+      const etaMs = parseEtaToMs(activeOrder.eta);
+      const expectedDeliveryTime = createdAt + etaMs;
+      const now = Date.now();
+      const diff = expectedDeliveryTime - now;
+
+      if (diff < 0) {
+        setIsLate(true);
+        setTimeRemaining(formatTimeRemaining(diff));
+      } else {
+        setIsLate(false);
+        setTimeRemaining(formatTimeRemaining(diff));
+      }
+    };
+
+    // Initial update
+    updateTimer();
+
+    // Update every second
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeOrder]);
 
   const toggleExpanded = () => {
     const newExpandedState = !isExpanded;
@@ -175,165 +208,228 @@ export default function ActiveDeliveryCard({
 
         {!loading && !error && activeOrder && (
           <>
-            {/* Customer Info */}
-            <View style={styles.row}>
-              {activeOrder.profilePicUrl ? (
-                <Image
-                  source={{ uri: activeOrder.profilePicUrl }}
-                  style={styles.avatar}
-                />
-              ) : (
-                <Ionicons name="person-circle" size={48} color="#9CA3AF" />
-              )}
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.name}>{activeOrder.userFullName}</Text>
-                <View style={styles.phoneRow}>
-                  <Text style={styles.contact}>
-                    {activeOrder.userMobileNumber}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => onCopy(activeOrder.userMobileNumber)}
-                  >
-                    <Ionicons name="copy-outline" size={18} color="#00AA66" />
-                  </TouchableOpacity>
+            {/* Customer Info Section */}
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="person" size={20} color="#00AA66" />
+                <Text style={styles.sectionTitle}>Customer Information</Text>
+              </View>
+
+              <View style={styles.row}>
+                {activeOrder.profilePicUrl ? (
+                  <Image
+                    source={{ uri: activeOrder.profilePicUrl }}
+                    style={styles.avatar}
+                  />
+                ) : (
+                  <Ionicons name="person-circle" size={48} color="#9CA3AF" />
+                )}
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.name}>{activeOrder.userFullName}</Text>
+                  <View style={styles.phoneRow}>
+                    <Ionicons name="call" size={16} color="#00AA66" />
+                    <Text style={styles.contact}>
+                      {activeOrder.userMobileNumber}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => onCopy(activeOrder.userMobileNumber)}
+                    >
+                      <Ionicons name="copy-outline" size={18} color="#00AA66" />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.userDetailsRow}>
+                    <Ionicons name="mail" size={14} color="#666" />
+                    <Text style={styles.userEmail}>Contact via phone</Text>
+                  </View>
                 </View>
               </View>
             </View>
 
-            {/* Delivery Stats */}
-            <View style={styles.infoRow}>
-              <View style={styles.infoBox}>
-                <Text style={styles.infoLabel}>Status</Text>
-                <Text style={styles.infoValue} numberOfLines={1}>
-                  {formatStatusLabel(
-                    activeOrder.orderTracking.length > 0
-                      ? activeOrder.orderTracking[
-                          activeOrder.orderTracking.length - 1
-                        ].status
-                      : "pending"
-                  )}
-                </Text>
-              </View>
-              <View style={styles.infoBox}>
-                <Text style={styles.infoLabel}>Amount</Text>
-                <Text style={styles.infoValue} numberOfLines={1}>
-                  ₦{activeOrder.amount.toLocaleString()}
+            <View style={styles.dividerLine} />
+
+            {/* ETA Countdown Section */}
+            <View style={styles.sectionContainer}>
+              <View style={styles.etaContainer}>
+                <Ionicons
+                  name="time"
+                  size={20}
+                  color={isLate ? "#FF3B30" : "#00AA66"}
+                />
+                <Text
+                  style={[
+                    styles.etaText,
+                    isLate ? styles.etaLateText : styles.etaOnTimeText,
+                  ]}
+                >
+                  {isLate
+                    ? `${timeRemaining} late`
+                    : `Expected delivery in ${timeRemaining}`}
                 </Text>
               </View>
             </View>
 
-            {/* View Note Button */}
+            <View style={styles.dividerLine} />
+
+            {/* Order Details Section */}
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="document-text" size={20} color="#00AA66" />
+                <Text style={styles.sectionTitle}>Order Details</Text>
+              </View>
+
+              <View style={styles.orderDetailsGrid}>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Amount</Text>
+                  <Text style={[styles.detailValue, styles.amountText]}>
+                    ₦{activeOrder.amount.toLocaleString()}
+                  </Text>
+                </View>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Customer</Text>
+                  <Text style={styles.detailValue}>
+                    {activeOrder.userFullName}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.dividerLine} />
+
+            {/* Location Details Section */}
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="location" size={20} color="#00AA66" />
+                <Text style={styles.sectionTitle}>Pickup & Delivery</Text>
+              </View>
+
+              <View style={styles.locationContainer}>
+                <View style={styles.locationItem}>
+                  <View style={styles.locationIconContainer}>
+                    <Ionicons
+                      name="arrow-up-circle"
+                      size={24}
+                      color="#FF6B35"
+                    />
+                  </View>
+                  <View style={styles.locationInfo}>
+                    <Text style={styles.locationLabel}>Pickup Location</Text>
+                    <Text style={styles.locationText}>
+                      {activeOrder.pickUpLocation.address}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.locationConnector} />
+
+                <View style={styles.locationItem}>
+                  <View style={styles.locationIconContainer}>
+                    <Ionicons
+                      name="arrow-down-circle"
+                      size={24}
+                      color="#00AA66"
+                    />
+                  </View>
+                  <View style={styles.locationInfo}>
+                    <Text style={styles.locationLabel}>Drop-off Location</Text>
+                    <Text style={styles.locationText}>
+                      {activeOrder.dropOffLocation.address}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {/* Customer Note Section */}
             {activeOrder.note && (
-              <Animated.View
-                style={[
-                  styles.viewNoteContainer,
-                  !hasViewedNote && {
-                    transform: [{ scale: pulseAnim }],
-                  },
-                ]}
-              >
-                <TouchableOpacity
-                  style={styles.viewNoteButton}
-                  onPress={handleViewNote}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons
-                    name="document-text-outline"
-                    size={20}
-                    color="#00AA66"
-                  />
-                  <Text style={styles.viewNoteText}>View Note</Text>
-                  {!hasViewedNote && <View style={styles.noteBadge} />}
-                </TouchableOpacity>
-              </Animated.View>
+              <>
+                <View style={styles.dividerLine} />
+                <View style={styles.sectionContainer}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons
+                      name="chatbubble-ellipses"
+                      size={20}
+                      color="#00AA66"
+                    />
+                    <Text style={styles.sectionTitle}>Customer Note</Text>
+                  </View>
+                  <View style={styles.noteContainer}>
+                    <Text style={styles.noteText}>{activeOrder.note}</Text>
+                  </View>
+                </View>
+              </>
             )}
 
-            {/* Status Flow */}
-            <View style={styles.statusFlow}>
-              {statuses.map((s, i) => (
-                <View key={s.label} style={styles.statusItem}>
-                  <View
-                    style={[
-                      styles.statusDot,
-                      { backgroundColor: getColorForStatus(s.label, i) },
-                    ]}
-                  />
-                  {i < statuses.length - 1 && (
+            <View style={styles.dividerLine} />
+
+            {/* Status Flow Section */}
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="git-branch" size={20} color="#00AA66" />
+                <Text style={styles.sectionTitle}>Delivery Progress</Text>
+              </View>
+
+              <View style={styles.statusFlow}>
+                {statuses.map((s, i) => (
+                  <View key={s.label} style={styles.statusItem}>
                     <View
                       style={[
-                        styles.connector,
+                        styles.statusDot,
                         { backgroundColor: getColorForStatus(s.label, i) },
                       ]}
                     />
-                  )}
-                  <Text
-                    style={[
-                      styles.statusLabel,
-                      { color: getColorForStatus(s.label, i) },
-                    ]}
-                  >
-                    {formatStatusLabel(s.label)}
-                  </Text>
-                </View>
-              ))}
+                    {i < statuses.length - 1 && (
+                      <View
+                        style={[
+                          styles.connector,
+                          { backgroundColor: getColorForStatus(s.label, i) },
+                        ]}
+                      />
+                    )}
+                    <Text
+                      style={[
+                        styles.statusLabel,
+                        { color: getColorForStatus(s.label, i) },
+                      ]}
+                    >
+                      {formatStatusLabel(s.label)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </View>
 
             {/* Next step */}
             {status !== "delivered" && (
-              <TouchableOpacity
-                style={[
-                  styles.actionBtn,
-                  updatingStatus && styles.actionBtnDisabled,
-                ]}
-                onPress={onNextStatus}
-                disabled={updatingStatus}
-              >
-                {updatingStatus ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator color="#fff" size="small" />
-                    <Text style={[styles.actionText, { marginLeft: 8 }]}>
-                      Updating...
-                    </Text>
-                  </View>
-                ) : (
-                  <Text style={styles.actionText}>Next</Text>
-                )}
-              </TouchableOpacity>
+              <>
+                <View style={styles.dividerLine} />
+                <View style={styles.sectionContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.actionBtn,
+                      updatingStatus && styles.actionBtnDisabled,
+                    ]}
+                    onPress={onNextStatus}
+                    disabled={updatingStatus}
+                  >
+                    {updatingStatus ? (
+                      <View style={styles.loadingContainer}>
+                        <ActivityIndicator color="#fff" size="small" />
+                        <Text style={[styles.actionText, { marginLeft: 8 }]}>
+                          Updating...
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.actionText}>
+                        Continue to Next Step
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
             )}
           </>
         )}
       </Animated.View>
-
-      {/* Note Modal */}
-      <Modal
-        visible={showNoteModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowNoteModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Customer Note</Text>
-              <TouchableOpacity onPress={() => setShowNoteModal(false)}>
-                <Ionicons name="close-circle" size={28} color="#666" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView
-              style={styles.modalScrollView}
-              showsVerticalScrollIndicator={true}
-            >
-              <Text style={styles.noteText}>{activeOrder?.note}</Text>
-            </ScrollView>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setShowNoteModal(false)}
-            >
-              <Text style={styles.modalCloseButtonText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -424,83 +520,147 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
   },
-  viewNoteContainer: {
+  noteContainer: {
     marginTop: 16,
-    alignItems: "center",
-  },
-  viewNoteButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
     backgroundColor: "#E6F7EF",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
     borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: "#00AA66",
-    gap: 8,
-    alignSelf: "center",
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#C2F2D0",
   },
-  viewNoteText: {
-    color: "#00AA66",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  noteBadge: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#FF3B30",
-    position: "absolute",
-    top: 8,
-    right: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    justifyContent: "flex-end",
-  },
-  modalContainer: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "70%",
-    paddingBottom: 20,
-  },
-  modalHeader: {
+  noteHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    marginBottom: 8,
+    gap: 6,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  modalScrollView: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    maxHeight: 400,
+  noteHeaderText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#00AA66",
   },
   noteText: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 14,
+    lineHeight: 20,
     color: "#374151",
   },
-  modalCloseButton: {
-    backgroundColor: "#00AA66",
-    marginHorizontal: 20,
-    marginTop: 12,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
+  // New detailed styles
+  sectionContainer: {
+    marginVertical: 8,
   },
-  modalCloseButtonText: {
-    color: "#fff",
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 8,
+  },
+  sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
+    color: "#333",
+  },
+  dividerLine: {
+    height: 1,
+    backgroundColor: "#E5E7EB",
+    marginVertical: 16,
+  },
+  userDetailsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+  },
+  userEmail: {
+    fontSize: 12,
+    color: "#666",
+  },
+  orderDetailsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  detailItem: {
+    width: "48%",
+    backgroundColor: "#f8f9fa",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+  },
+  statusText: {
+    color: "#00AA66",
+  },
+  amountText: {
+    color: "#00AA66",
+    fontSize: 16,
+  },
+  urgentText: {
+    color: "#FF6B35",
+    fontSize: 12,
+  },
+  normalText: {
+    color: "#666",
+    fontSize: 12,
+  },
+  locationContainer: {
+    paddingLeft: 8,
+  },
+  locationItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginVertical: 8,
+  },
+  locationIconContainer: {
+    marginRight: 12,
+    marginTop: 2,
+  },
+  locationInfo: {
+    flex: 1,
+  },
+  locationLabel: {
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 4,
+    fontWeight: "500",
+  },
+  locationText: {
+    fontSize: 14,
+    color: "#333",
+    lineHeight: 20,
+  },
+  locationConnector: {
+    width: 2,
+    height: 20,
+    backgroundColor: "#E5E7EB",
+    marginLeft: 11,
+    marginVertical: 4,
+  },
+  etaContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  etaText: {
+    fontSize: 15,
+    fontWeight: "600",
+    flex: 1,
+  },
+  etaOnTimeText: {
+    color: "#00AA66",
+  },
+  etaLateText: {
+    color: "#FF3B30",
   },
 });

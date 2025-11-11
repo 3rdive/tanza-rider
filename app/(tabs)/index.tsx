@@ -20,22 +20,25 @@ import MapView, {
 import * as Haptics from "expo-haptics";
 import ReviewBottomSheet from "../../components/review-bottom-sheet";
 import DocumentStatusBanner from "../../components/DocumentStatusBanner";
-import LocationSummaryCard from "../../components/home/LocationSummaryCard";
 import ActiveDeliveryCard from "../../components/home/ActiveDeliveryCard";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { useRider } from "../../hooks/rider.hook";
 import { useRiderActiveStatus } from "@/hooks/useRiderActiveStatus";
 import { useActiveOrders } from "@/hooks/useActiveOrders";
-import { orderService, OrderTrackingStatus } from "@/lib/api";
+import {
+  orderService,
+  OrderTrackingStatus,
+  ratingService,
+  ITaskReference,
+} from "@/lib/api";
 import { useDeviceLocation } from "@/hooks/location.hook";
+import { useTasks } from "@/hooks/useTasks";
 
 export default function HomeScreen() {
   const [status, setStatus] = useState<OrderTrackingStatus>("accepted");
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  // const [isActive, setIsActive] = useState(true);
-  // Bottom sheet header animation controls
-  // Header animation: 0 = visible, 1 = hidden
   const headerAnim = useRef(new Animated.Value(0)).current;
   const headerTranslate = headerAnim.interpolate({
     inputRange: [0, 1],
@@ -64,7 +67,15 @@ export default function HomeScreen() {
     refetch: refetchOrders,
   } = useActiveOrders();
   const { latitude, longitude } = useDeviceLocation();
+
+  // Poll for pending tasks every 30 seconds
+  const { tasks, completeTask, cancelTask } = useTasks({ status: "pending" });
+
   const [headerHidden, setHeaderHidden] = useState(false);
+  const [currentReviewTask, setCurrentReviewTask] = useState<{
+    taskId: string;
+    user: { name: string; avatar?: string; userId: string };
+  } | null>(null);
   const router = useRouter();
 
   const handleToggleOnline = (value: boolean) => {
@@ -129,20 +140,99 @@ export default function HomeScreen() {
 
   const handleCopy = (text: string) => {
     Clipboard.setString(text);
-    // Instead of simple alert, open review modal (temporary trigger)
-    setShowReview(true);
   };
 
   const [showReview, setShowReview] = useState(false);
 
-  const handleSubmitReview = (payload: {
+  // Check for review_request tasks and show modal
+  useEffect(() => {
+    if (tasks.length > 0) {
+      // Find the first review_request task
+      const reviewTask = tasks.find(
+        (task) => task.category === "request_review"
+      );
+
+      if (reviewTask) {
+        try {
+          // Parse the reference JSON to get user info
+          const reference: ITaskReference = JSON.parse(reviewTask.reference);
+
+          setCurrentReviewTask({
+            taskId: reviewTask.id,
+            user: {
+              name: `${reference.firstName} ${reference.lastName}`,
+              avatar: reference.profilePic,
+              userId: reference.userId,
+            },
+          });
+
+          // Show review modal
+          setShowReview(true);
+        } catch (error) {
+          console.error("Error parsing task reference:", error);
+        }
+      }
+    }
+  }, [tasks]);
+
+  const handleSubmitReview = async (payload: {
     rating: number;
     comments: string[];
   }) => {
-    // For now just close and log — in production call API
-    console.log("submitted review", payload);
+    if (!currentReviewTask) {
+      console.error("No review task available");
+      return;
+    }
+
+    try {
+      // Submit the rating
+      await ratingService.rateUser({
+        targetUserId: currentReviewTask.user.userId,
+        starRating: payload.rating,
+        comment: payload.comments.join(", "),
+      });
+
+      // Mark task as complete
+      await completeTask(currentReviewTask.taskId);
+
+      // Close modal and reset
+      setShowReview(false);
+      setCurrentReviewTask(null);
+
+      // Show success feedback
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert("Thanks", "Your review has been submitted");
+    } catch (error: any) {
+      console.error("Error submitting review:", error);
+      Alert.alert(
+        "Error",
+        error?.message || "Failed to submit review. Please try again."
+      );
+    }
+  };
+
+  const handleCloseReview = () => {
     setShowReview(false);
-    Alert.alert("Thanks", "Your review has been submitted");
+  };
+
+  const handleCancelReview = async () => {
+    if (!currentReviewTask) {
+      setShowReview(false);
+      return;
+    }
+    try {
+      await cancelTask(currentReviewTask.taskId);
+    } catch (err) {
+      console.error("Failed to cancel review task", err);
+    } finally {
+      setShowReview(false);
+      setCurrentReviewTask(null);
+      try {
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Warning
+        );
+      } catch {}
+    }
   };
 
   // Navigate to document/profile if INITIAL
@@ -152,6 +242,13 @@ export default function HomeScreen() {
       router.push("/profile/document");
     }
   }, [documentStatus, router]);
+
+  // Refetch active orders when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refetchOrders();
+    }, [refetchOrders])
+  );
 
   const nextStatus = async () => {
     if (!currentActiveOrder) {
@@ -385,16 +482,6 @@ export default function HomeScreen() {
         )}
       </MapView>
 
-      {/* Pickup & Dropoff Card */}
-      {currentActiveOrder && (
-        <LocationSummaryCard
-          pickupText={currentActiveOrder?.pickUpLocation.address || "pick_up"}
-          dropoffText={
-            currentActiveOrder?.dropOffLocation.address || "drop_off"
-          }
-        />
-      )}
-
       {/* Bottom Sheet */}
       <View style={styles.sheet}>
         <View style={styles.sheetHandle} />
@@ -430,11 +517,9 @@ export default function HomeScreen() {
       </View>
       <ReviewBottomSheet
         visible={showReview}
-        onClose={() => setShowReview(false)}
-        user={{
-          name: "John Doe",
-          avatar: "https://avatar.iran.liara.run/public/34",
-        }}
+        onClose={handleCloseReview}
+        onCancel={handleCancelReview}
+        user={currentReviewTask?.user || null}
         onSubmit={handleSubmitReview}
       />
     </View>
