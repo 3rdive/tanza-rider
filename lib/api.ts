@@ -35,19 +35,19 @@ AXIOS.interceptors.request.use(
           : rawHeaders;
 
       // Redact sensitive headers
-      // const safeHeaders: Record<string, unknown> = { ...(headers || {}) };
-      // if (safeHeaders.Authorization)
-      //   safeHeaders.Authorization = "***redacted***";
+      const safeHeaders: Record<string, unknown> = { ...(headers || {}) };
+      if (safeHeaders.Authorization)
+        safeHeaders.Authorization = "***redacted***";
 
-      // console.log("[Axios Request]", {
-      //   baseURL: config.baseURL,
-      //   method: config.method,
-      //   url: config.url,
-      //   params: config.params,
-      //   headers: safeHeaders,
-      //   data: config.data,
-      //   timeout: config.timeout,
-      // });
+      console.log("[Axios Request]", {
+        baseURL: config.baseURL,
+        method: config.method,
+        url: config.url,
+        params: config.params,
+        headers: safeHeaders,
+        data: config.data,
+        timeout: config.timeout,
+      });
     }
     return config;
   },
@@ -66,19 +66,19 @@ AXIOS.interceptors.request.use(
 AXIOS.interceptors.response.use(
   (response) => {
     if (isDev) {
-      // const rawHeaders = response.headers as any;
-      // const headers =
-      //   typeof rawHeaders?.toJSON === "function"
-      //     ? rawHeaders.toJSON()
-      //     : rawHeaders;
-      // console.log("[Axios Response]", {
-      //   method: response.config?.method,
-      //   url: response.config?.url,
-      //   status: response.status,
-      //   statusText: response.statusText,
-      //   headers,
-      //   data: response.data,
-      // });
+      const rawHeaders = response.headers as any;
+      const headers =
+        typeof rawHeaders?.toJSON === "function"
+          ? rawHeaders.toJSON()
+          : rawHeaders;
+      console.log("[Axios Response]", {
+        method: response.config?.method,
+        url: response.config?.url,
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+        data: response.data,
+      });
     }
     return response;
   },
@@ -732,26 +732,44 @@ export const ratingsService = {
 } as const;
 
 // Rider
+export interface IRiderDocument {
+  id: string;
+  docName: string;
+  docUrl: string;
+  documentStatus: "PENDING" | "APPROVED" | "REJECTED";
+  expirationDate: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface IRider {
   id: string;
   userId: string;
   vehicleType?: string | null;
-  vehiclePhoto?: string | null;
-  driverLicense?: string | null;
-  vehiclePapers?: string | null;
   documentStatus?: string | null;
   rejectionReason?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  documents?: IRiderDocument[];
+}
+
+export interface IRequiredDocument {
+  docName: string;
+  requiresExpiration: boolean;
+  isRequired: boolean;
+  vehicleType: string;
+}
+
+export interface IDocumentUpload {
+  docName: string;
+  docUrl: string;
+  expirationDate?: string;
 }
 
 export interface IUpdateRiderPayload {
   vehicleType?: string;
-  vehiclePhoto?: string | null;
-  driverLicense?: string | null;
-  vehiclePapers?: string[] | null;
   documentStatus?: string;
-  rejectionReason?: string | null;
 }
 
 export const riderService = {
@@ -763,6 +781,34 @@ export const riderService = {
     const { data } = await AXIOS.patch<IApiResponse<IRider>>(
       "/api/v1/riders/me",
       payload
+    );
+    return data;
+  },
+  /**
+   * Get required documents for a specific vehicle type
+   */
+  getRequiredDocuments: async (vehicleType: string) => {
+    const { data } = await AXIOS.get<IApiResponse<IRequiredDocument[]>>(
+      `/api/v1/riders/me/documents/required?vehicleType=${vehicleType}`
+    );
+    return data;
+  },
+  /**
+   * Upload or update documents
+   */
+  uploadDocuments: async (documents: IDocumentUpload[]) => {
+    const { data } = await AXIOS.post<IApiResponse<IRiderDocument[]>>(
+      "/api/v1/riders/me/documents",
+      { documents }
+    );
+    return data;
+  },
+  /**
+   * Delete a document by ID
+   */
+  deleteDocument: async (documentId: string) => {
+    const { data } = await AXIOS.delete<IApiResponse<void>>(
+      `/api/v1/riders/me/documents/${documentId}`
     );
     return data;
   },
