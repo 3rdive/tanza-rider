@@ -544,6 +544,18 @@ export interface IActiveOrder {
     longitude: string;
   };
   orderTracking: IActiveOrderTracking[];
+  sender: {
+    name: string;
+    role: string;
+    email: string;
+    phone: string;
+  };
+  recipient: {
+    name: string;
+    role: string;
+    email: string;
+    phone: string;
+  };
 }
 
 export interface IAssignedOrder {

@@ -36,6 +36,37 @@ export default function OTPVerificationScreen() {
   }, []);
 
   const handleOtpChange = (value: string, index: number) => {
+    // Handle paste or multiple digit input
+    if (value.length > 1) {
+      const digits = value.slice(0, 4).split("");
+      const newOtp = [...otp];
+
+      digits.forEach((digit, i) => {
+        if (index + i < 4) {
+          newOtp[index + i] = digit;
+        }
+      });
+
+      setOtp(newOtp);
+
+      // Focus the next empty input or the last one
+      const nextEmptyIndex = newOtp.findIndex((digit) => digit === "");
+      if (nextEmptyIndex !== -1) {
+        inputRefs.current[nextEmptyIndex]?.focus();
+      } else {
+        inputRefs.current[3]?.focus();
+      }
+
+      if (newOtp.every((digit) => digit !== "")) {
+        // Auto-verify when all digits are entered
+        setTimeout(async () => {
+          // await consumeOtp();
+        }, 500);
+      }
+      return;
+    }
+
+    // Handle single digit input
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
@@ -165,7 +196,7 @@ export default function OTPVerificationScreen() {
               onChangeText={(value) => handleOtpChange(value, index)}
               onKeyPress={(e) => handleKeyPress(e, index)}
               keyboardType="numeric"
-              maxLength={1}
+              // maxLength={1}
               textAlign="center"
             />
           ))}

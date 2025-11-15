@@ -172,7 +172,7 @@ export default function ActiveDeliveryCard({
           {
             maxHeight: animatedHeight.interpolate({
               inputRange: [0, 1],
-              outputRange: [0, 1000],
+              outputRange: [0, 2500],
             }),
             opacity: animatedOpacity,
             overflow: "hidden",
@@ -294,6 +294,124 @@ export default function ActiveDeliveryCard({
             </View>
 
             <View style={styles.dividerLine} />
+
+            {/* Sender & Recipient Info Section */}
+            {activeOrder.sender && activeOrder.recipient && (
+              <>
+                <View style={styles.sectionContainer}>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="people" size={20} color="#00AA66" />
+                    <Text style={styles.sectionTitle}>Sender & Recipient</Text>
+                  </View>
+
+                  {/* Sender Info */}
+                  <View style={styles.contactCard}>
+                    <View style={styles.contactHeader}>
+                      <Ionicons
+                        name="arrow-up-circle"
+                        size={20}
+                        color="#FF6B35"
+                      />
+                      <Text style={styles.contactRole}>Sender</Text>
+                    </View>
+                    <View style={styles.contactDetails}>
+                      <View style={styles.contactRow}>
+                        <Ionicons name="person" size={16} color="#666" />
+                        <Text style={styles.contactText}>
+                          {activeOrder.sender.name}
+                        </Text>
+                      </View>
+                      <View style={styles.contactRow}>
+                        <Ionicons name="call" size={16} color="#666" />
+                        <Text style={styles.contactText}>
+                          {activeOrder.sender.phone}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => onCopy(activeOrder.sender.phone)}
+                          style={styles.copyButton}
+                        >
+                          <Ionicons
+                            name="copy-outline"
+                            size={16}
+                            color="#00AA66"
+                          />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.contactRow}>
+                        <Ionicons name="mail" size={16} color="#666" />
+                        <Text style={styles.contactText}>
+                          {activeOrder.sender.email}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => onCopy(activeOrder.sender.email)}
+                          style={styles.copyButton}
+                        >
+                          <Ionicons
+                            name="copy-outline"
+                            size={16}
+                            color="#00AA66"
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Recipient Info */}
+                  <View style={[styles.contactCard, { marginTop: 12 }]}>
+                    <View style={styles.contactHeader}>
+                      <Ionicons
+                        name="arrow-down-circle"
+                        size={20}
+                        color="#00AA66"
+                      />
+                      <Text style={styles.contactRole}>Recipient</Text>
+                    </View>
+                    <View style={styles.contactDetails}>
+                      <View style={styles.contactRow}>
+                        <Ionicons name="person" size={16} color="#666" />
+                        <Text style={styles.contactText}>
+                          {activeOrder.recipient.name}
+                        </Text>
+                      </View>
+                      <View style={styles.contactRow}>
+                        <Ionicons name="call" size={16} color="#666" />
+                        <Text style={styles.contactText}>
+                          {activeOrder.recipient.phone}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => onCopy(activeOrder.recipient.phone)}
+                          style={styles.copyButton}
+                        >
+                          <Ionicons
+                            name="copy-outline"
+                            size={16}
+                            color="#00AA66"
+                          />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.contactRow}>
+                        <Ionicons name="mail" size={16} color="#666" />
+                        <Text style={styles.contactText}>
+                          {activeOrder.recipient.email}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => onCopy(activeOrder.recipient.email)}
+                          style={styles.copyButton}
+                        >
+                          <Ionicons
+                            name="copy-outline"
+                            size={16}
+                            color="#00AA66"
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.dividerLine} />
+              </>
+            )}
 
             {/* Location Details Section */}
             <View style={styles.sectionContainer}>
@@ -662,5 +780,38 @@ const styles = StyleSheet.create({
   },
   etaLateText: {
     color: "#FF3B30",
+  },
+  contactCard: {
+    backgroundColor: "#f8f9fa",
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 4,
+  },
+  contactHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  contactRole: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#333",
+  },
+  contactDetails: {
+    gap: 10,
+  },
+  contactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  contactText: {
+    fontSize: 14,
+    color: "#333",
+    flex: 1,
+  },
+  copyButton: {
+    padding: 4,
   },
 });

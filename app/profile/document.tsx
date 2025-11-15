@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -16,10 +16,10 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useNavigation } from "@react-navigation/native";
 import { storageService } from "@/lib/api";
 import { useRider } from "@/hooks/rider.hook";
 import type { IRequiredDocument, IDocumentUpload } from "@/lib/api";
+import { router } from "expo-router";
 
 interface DocumentData {
   docName: string;
@@ -32,7 +32,6 @@ interface DocumentData {
 }
 
 export default function DocumentVerification() {
-  const navigation = useNavigation();
   const {
     rider,
     documentStatus,
@@ -56,6 +55,7 @@ export default function DocumentVerification() {
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState<string | null>(null);
   const [tempDate, setTempDate] = useState<Date>(new Date());
+  const initializedRef = useRef(false);
 
   // Normalize status for display
   const status = documentStatus.toUpperCase() as
@@ -70,7 +70,8 @@ export default function DocumentVerification() {
     if (!rider) {
       fetchRider();
     }
-  }, [rider, fetchRider]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Fetch required documents when vehicle type changes
   useEffect(() => {
@@ -87,11 +88,12 @@ export default function DocumentVerification() {
     if (vehicleType) {
       loadRequiredDocs();
     }
-  }, [vehicleType, getRequiredDocuments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vehicleType]);
 
   // Populate document data from existing documents and required documents
   useEffect(() => {
-    if (requiredDocs.length > 0) {
+    if (requiredDocs.length > 0 && !initializedRef.current) {
       const newDocData: Record<string, DocumentData> = {};
 
       requiredDocs.forEach((reqDoc) => {
@@ -112,8 +114,10 @@ export default function DocumentVerification() {
       });
 
       setDocumentData(newDocData);
+      initializedRef.current = true;
     }
-  }, [requiredDocs, existingDocuments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requiredDocs]);
 
   // Update vehicle type in rider data
   useEffect(() => {
@@ -181,14 +185,19 @@ export default function DocumentVerification() {
           });
           const uploadedUrl = uploadRes.data.url;
 
-          // Update document data
-          setDocumentData((prev) => ({
-            ...prev,
-            [docName]: {
-              ...prev[docName],
-              docUrl: uploadedUrl,
-            },
-          }));
+          // Update document data - preserve all existing fields
+          setDocumentData((prev) => {
+            const existing = prev[docName];
+            if (!existing) return prev;
+
+            return {
+              ...prev,
+              [docName]: {
+                ...existing,
+                docUrl: uploadedUrl,
+              },
+            };
+          });
 
           Alert.alert("Uploaded", `${docName} uploaded successfully.`);
         } catch (err) {
@@ -255,14 +264,19 @@ export default function DocumentVerification() {
           });
           const uploadedUrl = uploadRes.data.url;
 
-          // Update document data
-          setDocumentData((prev) => ({
-            ...prev,
-            [docName]: {
-              ...prev[docName],
-              docUrl: uploadedUrl,
-            },
-          }));
+          // Update document data - preserve all existing fields
+          setDocumentData((prev) => {
+            const existing = prev[docName];
+            if (!existing) return prev;
+
+            return {
+              ...prev,
+              [docName]: {
+                ...existing,
+                docUrl: uploadedUrl,
+              },
+            };
+          });
 
           Alert.alert("Uploaded", `${docName} uploaded successfully.`);
         } catch (err) {
@@ -299,6 +313,24 @@ export default function DocumentVerification() {
     }
   };
 
+  useEffect(() => {
+    const ensureDefaultVehicle = async () => {
+      if (
+        !rider?.vehicleType &&
+        (documentStatus === "INITIAL" || documentStatus === "")
+      ) {
+        try {
+          await updateRider({ vehicleType: "bike" }).unwrap();
+        } catch (error) {
+          console.error("Error setting default vehicle type:", error);
+        }
+      }
+    };
+
+    ensureDefaultVehicle();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const formatDateToYYYYMMDD = (date: Date): string => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -318,13 +350,18 @@ export default function DocumentVerification() {
     if (selectedDate) {
       setTempDate(selectedDate);
       const formattedDate = formatDateToYYYYMMDD(selectedDate);
-      setDocumentData((prev) => ({
-        ...prev,
-        [docName]: {
-          ...prev[docName],
-          expirationDate: formattedDate,
-        },
-      }));
+      setDocumentData((prev) => {
+        const existing = prev[docName];
+        if (!existing) return prev;
+
+        return {
+          ...prev,
+          [docName]: {
+            ...existing,
+            expirationDate: formattedDate,
+          },
+        };
+      });
 
       if (Platform.OS === "ios") {
         // For iOS, we'll close the picker when user taps outside or confirms
@@ -512,7 +549,8 @@ export default function DocumentVerification() {
 
       Alert.alert("Success", "Your documents have been submitted for review.");
       // Optionally navigate back
-      (navigation as any).goBack();
+      // (navigation as any).goBack();
+      router.back();
     } catch (err: any) {
       console.error("Submit error:", err);
       Alert.alert(
@@ -530,7 +568,7 @@ export default function DocumentVerification() {
         <View style={styles.headerRow}>
           <TouchableOpacity
             style={styles.backBtn}
-            onPress={() => (navigation as any).goBack()}
+            onPress={() => router.back()}
           >
             <Ionicons name="chevron-back" size={24} color="#333" />
           </TouchableOpacity>
