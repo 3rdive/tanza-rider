@@ -7,8 +7,14 @@ import {
 import { Tabs } from "expo-router";
 import { View } from "react-native";
 import { DeliveryRequestSnackbar } from "@/components";
+import { usePushNotification } from "@/hooks/push-notification.hook";
 
 export default function TabLayout() {
+  const { expoPushToken, notification } = usePushNotification();
+  const data = JSON.stringify(notification, undefined, 2);
+
+  console.log("notification-data: ", data);
+  console.log("expo-push-notification: ", expoPushToken);
   return (
     <View style={{ flex: 1 }}>
       <Tabs

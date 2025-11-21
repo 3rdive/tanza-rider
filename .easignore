@@ -17,4 +17,3 @@ build/
 *.log
 .env
 .env.local
-google-service.json

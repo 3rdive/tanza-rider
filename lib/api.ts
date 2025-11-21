@@ -59,7 +59,7 @@ AXIOS.interceptors.request.use(
       });
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor
@@ -99,7 +99,7 @@ AXIOS.interceptors.response.use(
       }
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // Types
@@ -170,35 +170,35 @@ export const authService = {
   login: async (payload: ILoginPayload) => {
     const { data } = await AXIOS.post<IApiResponse<IAuthSuccessData>>(
       "/api/v1/auth/login",
-      payload
+      payload,
     );
     return data;
   },
   signUp: async (payload: ISignUpPayload) => {
     const { data } = await AXIOS.post<IApiResponse<IAuthSuccessData>>(
       "/api/v1/auth/sign-up",
-      payload
+      payload,
     );
     return data;
   },
   sendOtp: async (payload: IOtpPayload) => {
     const { data } = await AXIOS.post<IApiResponse<string>>(
       "/api/v1/otp",
-      payload
+      payload,
     );
     return data;
   },
   consumeOtp: async (payload: IOtpConsumePayload) => {
     const { data } = await AXIOS.post<IApiResponse<{ message: string }>>(
       "/api/v1/otp/consume",
-      payload
+      payload,
     );
     return data;
   },
   resetPassword: async (payload: IResetPasswordPayload) => {
     const { data } = await AXIOS.post<IApiResponse<string>>(
       "/api/v1/auth/reset-password",
-      payload
+      payload,
     );
     return data;
   },
@@ -212,7 +212,7 @@ export const authService = {
   userExistsByMobile: async (mobile: string) => {
     const { data } = await AXIOS.get<IApiResponse<any>>(
       "/api/v1/user/exists/mobile",
-      { params: { mobile } }
+      { params: { mobile } },
     );
     // Support either {data: {exists:boolean}} or {data:boolean}
     const exists = (data as any)?.data?.exists ?? (data as any)?.data ?? false;
@@ -221,7 +221,7 @@ export const authService = {
   userExistsByEmail: async (email: string) => {
     const { data } = await AXIOS.get<IApiResponse<any>>(
       "/api/v1/user/exists/email",
-      { params: { email } }
+      { params: { email } },
     );
     const exists = (data as any)?.data?.exists ?? (data as any)?.data ?? false;
     return Boolean(exists);
@@ -282,20 +282,20 @@ export const walletService = {
   },
   getRiderWallet: async () => {
     const { data } = await AXIOS.get<IApiResponse<IRiderWallet>>(
-      "/api/v1/wallet/rider"
+      "/api/v1/wallet/rider",
     );
     return data;
   },
   getVirtualAccount: async () => {
     const { data } = await AXIOS.get<IApiResponse<IVirtualAccount>>(
-      "/api/v1/wallet/virtual-account"
+      "/api/v1/wallet/virtual-account",
     );
     return data;
   },
   fund: async (payload: IFundWallet) => {
     const { data } = await AXIOS.post<IApiResponse<string>>(
       "/api/v1/wallet/fund",
-      payload
+      payload,
     );
     return data;
   },
@@ -325,20 +325,29 @@ export const userService = {
   updateProfile: async (payload: IUpdateProfilePayload) => {
     const { data } = await AXIOS.put<IApiResponse<IUser>>(
       "/api/v1/user/profile",
-      payload
+      payload,
     );
     return data;
   },
   updatePassword: async (payload: IUpdatePasswordPayload) => {
     const { data } = await AXIOS.put<IApiResponse<string>>(
       "/api/v1/user/password/update",
-      payload
+      payload,
     );
     return data;
   },
   getProfile: async () => {
     const { data } = await AXIOS.get<IApiResponse<IUser>>(
-      "/api/v1/user/profile"
+      "/api/v1/user/profile",
+    );
+    return data;
+  },
+  updatePushNotificationToken: async (payload: {
+    expoPushNotificationToken: string;
+  }) => {
+    const { data } = await AXIOS.post<IApiResponse<any>>(
+      "/api/v1/user/push-notification/token",
+      payload,
     );
     return data;
   },
@@ -402,7 +411,7 @@ export const transactionService = {
   },
   getById: async (id: string) => {
     const { data } = await AXIOS.get<IApiResponse<ITransactionDetail | null>>(
-      `/api/v1/transaction/${id}`
+      `/api/v1/transaction/${id}`,
     );
     return data;
   },
@@ -589,7 +598,7 @@ export const orderService = {
   calculateCharge: async (params: ICalculateChargeParams) => {
     const { data } = await AXIOS.get<IApiResponse<ICalculateChargeData>>(
       "/api/v1/order/calculate-charge",
-      { params }
+      { params },
     );
     return data;
   },
@@ -601,12 +610,12 @@ export const orderService = {
       endLon: number;
       vehicleType: string;
     },
-    payload: ICreateOrderPayload
+    payload: ICreateOrderPayload,
   ) => {
     const { data } = await AXIOS.post<IApiResponse<IOrderData>>(
       "/api/v1/order",
       payload,
-      { params: query }
+      { params: query },
     );
     return data;
   },
@@ -625,7 +634,7 @@ export const orderService = {
   },
   getOrderById: async (orderId: string) => {
     const { data } = await AXIOS.get<IApiResponse<IOrderDetail>>(
-      `/api/v1/order/${orderId}`
+      `/api/v1/order/${orderId}`,
     );
     return data;
   },
@@ -634,7 +643,7 @@ export const orderService = {
    */
   getActiveOrders: async () => {
     const { data } = await AXIOS.get<IApiResponse<IActiveOrder[]>>(
-      "/api/v1/order/active-orders"
+      "/api/v1/order/active-orders",
     );
     return data;
   },
@@ -643,7 +652,7 @@ export const orderService = {
    */
   getAssignedOrders: async () => {
     const { data } = await AXIOS.get<IApiResponse<IAssignedOrder[]>>(
-      "/api/v1/order/assigned-orders"
+      "/api/v1/order/assigned-orders",
     );
     return data;
   },
@@ -654,7 +663,7 @@ export const orderService = {
     const { data } = await AXIOS.post<IApiResponse<string>>(
       "/api/v1/order/rider-feedback",
       payload,
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     return data;
   },
@@ -665,7 +674,7 @@ export const orderService = {
     const { data } = await AXIOS.post<IApiResponse<IOrderTracking>>(
       "/api/v1/order/tracking",
       payload,
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     return data;
   },
@@ -710,14 +719,14 @@ export const locationService = {
   search: async (q: string) => {
     const { data } = await AXIOS.get<IApiResponse<ILocationFeature[]>>(
       "/api/v1/location/search",
-      { params: { q } }
+      { params: { q } },
     );
     return data;
   },
   reverse: async (lat: number, lon: number) => {
     const { data } = await AXIOS.get<IApiResponse<any>>(
       "/api/v1/location/reverse",
-      { params: { lat, lon } }
+      { params: { lat, lon } },
     );
     return data;
   },
@@ -737,7 +746,7 @@ export const ratingsService = {
       payload,
       {
         headers: { "Content-Type": "application/json" },
-      }
+      },
     );
     return data;
   },
@@ -792,7 +801,7 @@ export const riderService = {
   updateMe: async (payload: IUpdateRiderPayload) => {
     const { data } = await AXIOS.patch<IApiResponse<IRider>>(
       "/api/v1/riders/me",
-      payload
+      payload,
     );
     return data;
   },
@@ -801,7 +810,7 @@ export const riderService = {
    */
   getRequiredDocuments: async (vehicleType: string) => {
     const { data } = await AXIOS.get<IApiResponse<IRequiredDocument[]>>(
-      `/api/v1/riders/me/documents/required?vehicleType=${vehicleType}`
+      `/api/v1/riders/me/documents/required?vehicleType=${vehicleType}`,
     );
     return data;
   },
@@ -811,7 +820,7 @@ export const riderService = {
   uploadDocuments: async (documents: IDocumentUpload[]) => {
     const { data } = await AXIOS.post<IApiResponse<IRiderDocument[]>>(
       "/api/v1/riders/me/documents",
-      { documents }
+      { documents },
     );
     return data;
   },
@@ -820,7 +829,7 @@ export const riderService = {
    */
   deleteDocument: async (documentId: string) => {
     const { data } = await AXIOS.delete<IApiResponse<void>>(
-      `/api/v1/riders/me/documents/${documentId}`
+      `/api/v1/riders/me/documents/${documentId}`,
     );
     return data;
   },
@@ -829,7 +838,7 @@ export const riderService = {
    */
   getActiveStatus: async () => {
     const { data } = await AXIOS.get<IApiResponse<IRiderActiveStatus>>(
-      "/api/v1/riders/active-status"
+      "/api/v1/riders/active-status",
     );
     return data;
   },
@@ -840,7 +849,7 @@ export const riderService = {
     const { data } = await AXIOS.put<IApiResponse<IRiderActiveStatus>>(
       "/api/v1/riders/active-status",
       payload,
-      { headers: { "Content-Type": "application/json" } }
+      { headers: { "Content-Type": "application/json" } },
     );
     return data;
   },
@@ -940,40 +949,40 @@ export interface IAccountValidation {
 export const withdrawalService = {
   getAll: async () => {
     const { data } = await AXIOS.get<IApiResponse<IWithdrawalOption[]>>(
-      "/api/v1/wallet/withdrawal-options"
+      "/api/v1/wallet/withdrawal-options",
     );
     return data;
   },
   add: async (payload: IAddWithdrawalOptionPayload) => {
     const { data } = await AXIOS.post<IApiResponse<IWithdrawalOption>>(
       "/api/v1/wallet/withdrawal-options",
-      payload
+      payload,
     );
     return data;
   },
   setDefault: async (id: string) => {
     const { data } = await AXIOS.patch<IApiResponse<IWithdrawalOption>>(
-      `/api/v1/wallet/withdrawal-options/${id}/default`
+      `/api/v1/wallet/withdrawal-options/${id}/default`,
     );
     return data;
   },
   delete: async (id: string) => {
     const { data } = await AXIOS.delete<IApiResponse<{ success: boolean }>>(
-      `/api/v1/wallet/withdrawal-options/${id}`
+      `/api/v1/wallet/withdrawal-options/${id}`,
     );
     return data;
   },
   searchBanks: async (query: string) => {
     const { data } = await AXIOS.get<IApiResponse<IBank[]>>(
       "/api/v1/wallet/banks",
-      { params: { query } }
+      { params: { query } },
     );
     return data;
   },
   validateAccount: async (accountNumber: string, bankCode: string) => {
     const { data } = await AXIOS.get<IApiResponse<IAccountValidation>>(
       "/api/v1/wallet/banks/validate",
-      { params: { account_number: accountNumber, bank_code: bankCode } }
+      { params: { account_number: accountNumber, bank_code: bankCode } },
     );
     return data;
   },
@@ -1019,14 +1028,14 @@ export const notificationService = {
   list: async (params: { page?: number; limit?: number }) => {
     const { data } = await AXIOS.get<INotificationListResponse>(
       "/api/v1/notification",
-      { params }
+      { params },
     );
     return data;
   },
   markAsSeen: async (payload: IMarkAsSeenPayload) => {
     const { data } = await AXIOS.put<IMarkAsSeenResponse>(
       "/api/v1/notification/mark-as-seen",
-      payload
+      payload,
     );
     return data;
   },
@@ -1086,13 +1095,13 @@ export const taskService = {
   },
   completeTask: async (taskId: string) => {
     const { data } = await AXIOS.patch<IApiResponse<ITask>>(
-      `/api/v1/task/${taskId}/complete`
+      `/api/v1/task/${taskId}/complete`,
     );
     return data;
   },
   cancelTask: async (taskId: string) => {
     const { data } = await AXIOS.patch<IApiResponse<ITask>>(
-      `/api/v1/task/${taskId}/cancel`
+      `/api/v1/task/${taskId}/cancel`,
     );
     return data;
   },
@@ -1103,7 +1112,7 @@ export const ratingService = {
   rateUser: async (payload: IRateUserPayload) => {
     const { data } = await AXIOS.post<IApiResponse<any>>(
       "/api/v1/ratings/rate",
-      payload
+      payload,
     );
     return data;
   },

@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "718328420576",
+    "project_id": "expo-notification-b2013",
+    "storage_bucket": "expo-notification-b2013.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:718328420576:android:6d30d629b979f3d54b5885",
+        "android_client_info": {
+          "package_name": "com.thirdive.tanzago"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADzPt2gWJWtCgmQvHUV6UyqmongIY-Nb0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:718328420576:android:d9f1dfd4e6a528524b5885",
+        "android_client_info": {
+          "package_name": "dev.abbey.notification"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADzPt2gWJWtCgmQvHUV6UyqmongIY-Nb0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
