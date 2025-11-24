@@ -1,33 +1,71 @@
 {
-  "amount": 1684.8,
-  "createdAt": "2025-11-11T00:13:42.196Z",
-  "dropOffLocation": {
-    "address": "Chapel of Grace Federal University of Technology, Minna, Bosso Campus.",
-    "latitude": "9.6558647",
-    "longitude": "6.5233307"
-  },
-  "eta": "1 hour 12 minutes 47 seconds",
-  "note": "",
-  "orderId": "6ecc32a2-55d9-4825-8a24-e64ca6cf54e2",
-  "orderTracking": [
-    {
-      "createdAt": "2025-11-11T00:13:42.196Z",
-      "id": "d334fc45-5d6b-4e9e-bb4a-c9db10a14951",
-      "status": "pending"
+  "actionIdentifier": "expo.modules.notifications.actions.DEFAULT",
+  "notification": {
+    "request": {
+      "trigger": {
+        "remoteMessage": {
+          "originalPriority": 2,
+          "sentTime": 1763824966671,
+          "notification": {
+            "usesDefaultVibrateSettings": false,
+            "color": null,
+            "channelId": null,
+            "visibility": null,
+            "sound": null,
+            "tag": null,
+            "bodyLocalizationArgs": null,
+            "imageUrl": null,
+            "title": "Order Delivered",
+            "ticker": null,
+            "eventTime": null,
+            "body": "You have a new message.",
+            "titleLocalizationKey": null,
+            "notificationPriority": null,
+            "icon": null,
+            "usesDefaultLightSettings": false,
+            "sticky": false,
+            "link": null,
+            "titleLocalizationArgs": null,
+            "bodyLocalizationKey": null,
+            "usesDefaultSound": false,
+            "clickAction": null,
+            "localOnly": false,
+            "lightSettings": null,
+            "notificationCount": null
+          },
+          "data": {
+            "dataString": "{\"route\":\"(tabs)\"}",
+            "message": "You have a new message.",
+            "title": "Order Delivered",
+            "body": "{\"route\":\"(tabs)\"}",
+            "scopeKey": "@sammie001/tanza-go",
+            "experienceId": "@sammie001/tanza-go",
+            "projectId": "19f7e91d-d263-44ce-b55f-b78ec822f88d"
+          },
+          "to": null,
+          "ttl": 2419200,
+          "collapseKey": "com.thirdive.tanzago",
+          "messageType": null,
+          "priority": 2,
+          "from": "718328420576",
+          "messageId": "0:1763824966676912%fd479f60fd479f60"
+        },
+        "type": "push"
+      },
+      "content": {
+        "dataString": "{\"route\":\"(tabs)\"}",
+        "autoDismiss": true,
+        "body": "You have a new message.",
+        "sound": "default",
+        "sticky": false,
+        "title": "Order Delivered",
+        "badge": null,
+        "priority": "default",
+        "subtitle": null,
+        "data": { "route": "(tabs)" }
+      },
+      "identifier": "0:1763824966676912%fd479f60fd479f60"
     },
-    {
-      "createdAt": "2025-11-11T00:13:49.001Z",
-      "id": "b1e24b95-d021-473b-97ac-1ddfcba41889",
-      "status": "accepted"
-    }
-  ],
-  "pickUpLocation": {
-    "address": "Main Campus (Gidan Kwano)",
-    "latitude": "9.5306701",
-    "longitude": "6.4460533647098845"
-  },
-  "profilePicUrl": "http://localhost:3030/api/v1/storage-media/97d78632-ace3-4edc-ba9f-41b855b14110.jpg",
-  "userFullName": "Remi Abiodun",
-  "userId": "744185eb-cb73-4ed4-b0a6-c27319103caa",
-  "userMobileNumber": "8050223371"
+    "date": 1763824966671
+  }
 }

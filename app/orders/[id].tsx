@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { orderService, IOrderDetail } from "@/lib/api";
 import { tzColors } from "@/theme/color";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -169,233 +170,325 @@ export default function OrderDetailScreen() {
   const completed = isCompleted();
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color="#222" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Order Details</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <SafeAreaView>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color="#222" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Order Details</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[tzColors.primary]}
-            tintColor={tzColors.primary}
-          />
-        }
-      >
-        {/* Order ID & Status */}
-        <View style={styles.card}>
-          <View style={styles.orderHeader}>
-            <View>
-              <Text style={styles.orderIdLabel}>Order ID</Text>
-              <Text style={styles.orderId}>#{order.id.slice(0, 8)}</Text>
-            </View>
-            <View
-              style={[
-                styles.statusBadge,
-                { backgroundColor: `${getStatusColor(getCurrentStatus())}15` },
-              ]}
-            >
-              <Ionicons
-                name={getStatusIcon(getCurrentStatus()) as any}
-                size={16}
-                color={getStatusColor(getCurrentStatus())}
-              />
-              <Text
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[tzColors.primary]}
+              tintColor={tzColors.primary}
+            />
+          }
+        >
+          {/* Order ID & Status */}
+          <View style={styles.card}>
+            <View style={styles.orderHeader}>
+              <View>
+                <Text style={styles.orderIdLabel}>Order ID</Text>
+                <Text style={styles.orderId}>#{order.id.slice(0, 8)}</Text>
+              </View>
+              <View
                 style={[
-                  styles.statusText,
-                  { color: getStatusColor(getCurrentStatus()) },
+                  styles.statusBadge,
+                  {
+                    backgroundColor: `${getStatusColor(getCurrentStatus())}15`,
+                  },
                 ]}
               >
-                {formatStatus(getCurrentStatus())}
+                <Ionicons
+                  name={getStatusIcon(getCurrentStatus()) as any}
+                  size={16}
+                  color={getStatusColor(getCurrentStatus())}
+                />
+                <Text
+                  style={[
+                    styles.statusText,
+                    { color: getStatusColor(getCurrentStatus()) },
+                  ]}
+                >
+                  {formatStatus(getCurrentStatus())}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Created</Text>
+              <Text style={styles.infoValue}>
+                {formatDate(order.createdAt)}
+              </Text>
+            </View>
+
+            {order.eta && !completed && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>ETA</Text>
+                <Text style={styles.infoValue}>{order.eta}</Text>
+              </View>
+            )}
+
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Role</Text>
+              <Text style={styles.infoValue}>
+                {order.userOrderRole === "sender" ? "Sender" : "Recipient"}
+              </Text>
+            </View>
+
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Vehicle Type</Text>
+              <Text style={styles.infoValue}>
+                {order.vehicleType.toUpperCase()}
               </Text>
             </View>
           </View>
 
-          <View style={styles.divider} />
+          {/* Location Details - Only show for non-completed orders */}
+          {!completed && (
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Delivery Route</Text>
 
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Created</Text>
-            <Text style={styles.infoValue}>{formatDate(order.createdAt)}</Text>
-          </View>
-
-          {order.eta && !completed && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>ETA</Text>
-              <Text style={styles.infoValue}>{order.eta}</Text>
-            </View>
-          )}
-
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Role</Text>
-            <Text style={styles.infoValue}>
-              {order.userOrderRole === "sender" ? "Sender" : "Recipient"}
-            </Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Vehicle Type</Text>
-            <Text style={styles.infoValue}>
-              {order.vehicleType.toUpperCase()}
-            </Text>
-          </View>
-        </View>
-
-        {/* Location Details - Only show for non-completed orders */}
-        {!completed && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Delivery Route</Text>
-
-            <View style={styles.locationItem}>
-              <View style={styles.locationIconContainer}>
-                <Ionicons name="navigate" size={20} color={tzColors.primary} />
-              </View>
-              <View style={styles.locationDetails}>
-                <Text style={styles.locationLabel}>Pickup Location</Text>
-                <Text style={styles.locationAddress}>
-                  {order.pickUpLocation.address}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.routeLine} />
-
-            <View style={styles.locationItem}>
-              <View style={styles.locationIconContainer}>
-                <Ionicons name="flag" size={20} color="#FF4C4C" />
-              </View>
-              <View style={styles.locationDetails}>
-                <Text style={styles.locationLabel}>Drop-off Location</Text>
-                <Text style={styles.locationAddress}>
-                  {order.dropOffLocation.address}
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Pricing Details */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Pricing Breakdown</Text>
-
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Delivery Fee</Text>
-            <Text style={styles.priceValue}>
-              ₦{order.deliveryFee.toLocaleString()}
-            </Text>
-          </View>
-
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Service Charge</Text>
-            <Text style={styles.priceValue}>
-              ₦{order.serviceChargeAmount.toLocaleString()}
-            </Text>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.priceRow}>
-            <Text style={styles.totalLabel}>Total Amount</Text>
-            <Text style={styles.totalValue}>
-              ₦{order.totalAmount.toLocaleString()}
-            </Text>
-          </View>
-        </View>
-
-        {/* Notes */}
-        {order.noteForRider && order.noteForRider.trim() !== "" && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Note for Rider</Text>
-            <Text style={styles.noteText}>{order.noteForRider}</Text>
-          </View>
-        )}
-
-        {/* Order Tracking */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Order Timeline</Text>
-
-          {order.orderTracking
-            .slice()
-            .reverse()
-            .map((tracking, index) => (
-              <View key={tracking.id} style={styles.trackingItem}>
-                <View style={styles.trackingIconContainer}>
-                  <View
-                    style={[
-                      styles.trackingDot,
-                      {
-                        backgroundColor: getStatusColor(tracking.status),
-                      },
-                    ]}
+              <View style={styles.locationItem}>
+                <View style={styles.locationIconContainer}>
+                  <Ionicons
+                    name="navigate"
+                    size={20}
+                    color={tzColors.primary}
                   />
-                  {index < order.orderTracking.length - 1 && (
-                    <View style={styles.trackingLine} />
-                  )}
                 </View>
-                <View style={styles.trackingContent}>
-                  <View style={styles.trackingHeader}>
-                    <Text style={styles.trackingStatus}>
-                      {formatStatus(tracking.status)}
-                    </Text>
-                    <Text style={styles.trackingTime}>
-                      {new Date(tracking.createdAt).toLocaleTimeString(
-                        "en-US",
-                        {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
-                    </Text>
-                  </View>
-                  {tracking.note && (
-                    <Text style={styles.trackingNote}>{tracking.note}</Text>
-                  )}
-                  <Text style={styles.trackingDate}>
-                    {formatDate(tracking.createdAt)}
+                <View style={styles.locationDetails}>
+                  <Text style={styles.locationLabel}>Pickup Location</Text>
+                  <Text style={styles.locationAddress}>
+                    {order.pickUpLocation.address}
                   </Text>
                 </View>
               </View>
-            ))}
-        </View>
 
-        {/* Rider Info */}
-        {order.riderAssigned && (
-          <View style={styles.card}>
-            <View style={styles.riderHeader}>
-              <Ionicons name="bicycle" size={24} color={tzColors.primary} />
-              <Text style={styles.sectionTitle}>Rider Information</Text>
+              <View style={styles.routeLine} />
+
+              {/* Multiple Delivery Destinations */}
+              {order.hasMultipleDeliveries &&
+              order.deliveryDestinations &&
+              order.deliveryDestinations.length > 0 ? (
+                <>
+                  {order.deliveryDestinations.map((destination, index) => (
+                    <React.Fragment key={destination.id}>
+                      <View style={styles.locationItem}>
+                        <View style={styles.locationIconContainer}>
+                          <Ionicons
+                            name="flag"
+                            size={20}
+                            color={
+                              destination.delivered ? "#00B624" : "#FF4C4C"
+                            }
+                          />
+                        </View>
+                        <View style={styles.locationDetails}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 8,
+                              marginBottom: 4,
+                            }}
+                          >
+                            <Text style={styles.locationLabel}>
+                              Drop-off {index + 1}
+                            </Text>
+                            {destination.delivered && (
+                              <Ionicons
+                                name="checkmark-circle"
+                                size={16}
+                                color="#00B624"
+                              />
+                            )}
+                          </View>
+                          <Text style={styles.locationAddress}>
+                            {destination.dropOffLocation.address}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.locationLabel,
+                              { marginTop: 6, color: "#666" },
+                            ]}
+                          >
+                            {destination.recipient.name} •{" "}
+                            {destination.recipient.phone}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.locationLabel,
+                              { marginTop: 4, color: "#666" },
+                            ]}
+                          >
+                            {destination.distanceFromPickupKm.toFixed(2)} km
+                            from pickup • ₦
+                            {destination.deliveryFee.toLocaleString()}
+                          </Text>
+                          {destination.deliveredAt && (
+                            <Text
+                              style={[
+                                styles.locationLabel,
+                                { marginTop: 4, color: "#00B624" },
+                              ]}
+                            >
+                              Delivered on{" "}
+                              {new Date(
+                                destination.deliveredAt,
+                              ).toLocaleString()}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                      {index < order.deliveryDestinations.length - 1 && (
+                        <View style={styles.routeLine} />
+                      )}
+                    </React.Fragment>
+                  ))}
+                </>
+              ) : (
+                <View style={styles.locationItem}>
+                  <View style={styles.locationIconContainer}>
+                    <Ionicons name="flag" size={20} color="#FF4C4C" />
+                  </View>
+                  <View style={styles.locationDetails}>
+                    <Text style={styles.locationLabel}>Drop-off Location</Text>
+                    <Text style={styles.locationAddress}>
+                      {order.dropOffLocation.address}
+                    </Text>
+                  </View>
+                </View>
+              )}
             </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Rider Assigned</Text>
-              <Text style={styles.infoValue}>
-                {order.riderAssignedAt
-                  ? formatDate(order.riderAssignedAt)
-                  : "Yes"}
+          )}
+
+          {/* Pricing Details */}
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Pricing Breakdown</Text>
+
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Delivery Fee</Text>
+              <Text style={styles.priceValue}>
+                ₦{order.deliveryFee.toLocaleString()}
               </Text>
             </View>
-            {completed && (
+
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Service Charge</Text>
+              <Text style={styles.priceValue}>
+                ₦{order.serviceChargeAmount.toLocaleString()}
+              </Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.priceRow}>
+              <Text style={styles.totalLabel}>Total Amount</Text>
+              <Text style={styles.totalValue}>
+                ₦{order.totalAmount.toLocaleString()}
+              </Text>
+            </View>
+          </View>
+
+          {/* Notes */}
+          {order.noteForRider && order.noteForRider.trim() !== "" && (
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Note for Rider</Text>
+              <Text style={styles.noteText}>{order.noteForRider}</Text>
+            </View>
+          )}
+
+          {/* Order Tracking */}
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Order Timeline</Text>
+
+            {order.orderTracking
+              .slice()
+              .reverse()
+              .map((tracking, index) => (
+                <View key={tracking.id} style={styles.trackingItem}>
+                  <View style={styles.trackingIconContainer}>
+                    <View
+                      style={[
+                        styles.trackingDot,
+                        {
+                          backgroundColor: getStatusColor(tracking.status),
+                        },
+                      ]}
+                    />
+                    {index < order.orderTracking.length - 1 && (
+                      <View style={styles.trackingLine} />
+                    )}
+                  </View>
+                  <View style={styles.trackingContent}>
+                    <View style={styles.trackingHeader}>
+                      <Text style={styles.trackingStatus}>
+                        {formatStatus(tracking.status)}
+                      </Text>
+                      <Text style={styles.trackingTime}>
+                        {new Date(tracking.createdAt).toLocaleTimeString(
+                          "en-US",
+                          {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          },
+                        )}
+                      </Text>
+                    </View>
+                    {tracking.note && (
+                      <Text style={styles.trackingNote}>{tracking.note}</Text>
+                    )}
+                    <Text style={styles.trackingDate}>
+                      {formatDate(tracking.createdAt)}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+          </View>
+
+          {/* Rider Info */}
+          {order.riderAssigned && (
+            <View style={styles.card}>
+              <View style={styles.riderHeader}>
+                <Ionicons name="bicycle" size={24} color={tzColors.primary} />
+                <Text style={styles.sectionTitle}>Rider Information</Text>
+              </View>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Rider Rewarded</Text>
+                <Text style={styles.infoLabel}>Rider Assigned</Text>
                 <Text style={styles.infoValue}>
-                  {order.hasRewardedRider ? "Yes ⭐" : "No"}
+                  {order.riderAssignedAt
+                    ? formatDate(order.riderAssignedAt)
+                    : "Yes"}
                 </Text>
               </View>
-            )}
-          </View>
-        )}
-      </ScrollView>
-    </View>
+              {completed && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Rider Rewarded</Text>
+                  <Text style={styles.infoValue}>
+                    {order.hasRewardedRider ? "Yes ⭐" : "No"}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 }
 

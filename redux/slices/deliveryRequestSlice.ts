@@ -5,11 +5,32 @@ export interface DeliveryRequest {
   customerName: string;
   pickupLocation: string;
   dropoffLocation: string;
-  distance: string;
+  distance: number;
   estimatedEarning: number;
   packageType: string;
   timeAgo: string;
   isUrgent: boolean;
+  hasMultipleDeliveries?: boolean;
+  deliveryDestinations?: {
+    id: string;
+    dropOffLocation: {
+      address: string;
+      latitude: string;
+      longitude: string;
+    };
+    recipient: {
+      name: string;
+      role: string;
+      email: string;
+      phone: string;
+    };
+    distanceFromPickupKm: number;
+    durationFromPickup: string;
+    deliveryFee: number;
+    delivered: boolean;
+    deliveredAt: string | null;
+    createdAt: string;
+  }[];
 }
 
 interface DeliveryRequestState {

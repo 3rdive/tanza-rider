@@ -7,9 +7,10 @@ import {
   Animated,
   Image,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { IActiveOrder } from "@/lib/api";
+import { IActiveOrder, orderService } from "@/lib/api";
 
 type StatusDef = { label: string; color: string };
 
@@ -23,6 +24,7 @@ type Props = {
   onCopy: (text: string) => void;
   activeOrder?: IActiveOrder | null;
   updatingStatus?: boolean;
+  onRefetchOrders?: () => void;
 };
 
 export default function ActiveDeliveryCard({
@@ -35,6 +37,7 @@ export default function ActiveDeliveryCard({
   onCopy,
   activeOrder,
   updatingStatus = false,
+  onRefetchOrders,
 }: Props) {
   const [isExpanded, setIsExpanded] = useState(true);
   const animatedHeight = useRef(new Animated.Value(1)).current;
@@ -42,8 +45,7 @@ export default function ActiveDeliveryCard({
   const animatedRotation = useRef(new Animated.Value(1)).current;
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [isLate, setIsLate] = useState(false);
-
-  console.log("ActiveDeliveryCard render - status:", activeOrder);
+  const [markingDelivered, setMarkingDelivered] = useState<string | null>(null);
 
   // Parse ETA string like "1 hour 12 minutes 47 seconds" to milliseconds
   const parseEtaToMs = (etaString: string): number => {
@@ -140,6 +142,58 @@ export default function ActiveDeliveryCard({
       .split("_")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
+  };
+
+  // Handler to mark a destination as delivered
+  const handleMarkAsDelivered = async (destinationId: string) => {
+    if (!activeOrder) return;
+
+    try {
+      setMarkingDelivered(destinationId);
+      await orderService.markDestinationAsDelivered({
+        orderId: activeOrder.orderId,
+        destinationId,
+      });
+
+      Alert.alert("Success", "Destination marked as delivered");
+
+      // Refetch orders to get updated data
+      if (onRefetchOrders) {
+        onRefetchOrders();
+      }
+    } catch (error: any) {
+      console.error("Error marking destination as delivered:", error);
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message ||
+          "Failed to mark destination as delivered",
+      );
+    } finally {
+      setMarkingDelivered(null);
+    }
+  };
+
+  // Check if all destinations are delivered
+  const allDestinationsDelivered = () => {
+    if (!activeOrder || !activeOrder.hasMultipleDeliveries) {
+      return true; // No multiple deliveries, so no restriction
+    }
+    return activeOrder.deliveryDestinations.every((dest) => dest.delivered);
+  };
+
+  // Check if the next step is "delivered"
+  const isNextStepDelivered = () => {
+    const currentIndex = statuses.findIndex((s) => s.label === status);
+    if (currentIndex < statuses.length - 1) {
+      const nextStatus = statuses[currentIndex + 1].label;
+      return nextStatus === "delivered";
+    }
+    return false;
+  };
+
+  // Determine if "Continue to Next Step" should be disabled
+  const shouldDisableContinue = () => {
+    return isNextStepDelivered() && !allDestinationsDelivered();
   };
 
   return (
@@ -439,21 +493,153 @@ export default function ActiveDeliveryCard({
 
                 <View style={styles.locationConnector} />
 
-                <View style={styles.locationItem}>
-                  <View style={styles.locationIconContainer}>
-                    <Ionicons
-                      name="arrow-down-circle"
-                      size={24}
-                      color="#00AA66"
-                    />
+                {/* Multiple Delivery Destinations */}
+                {activeOrder.hasMultipleDeliveries &&
+                activeOrder.deliveryDestinations &&
+                activeOrder.deliveryDestinations.length > 0 ? (
+                  <>
+                    {activeOrder.deliveryDestinations.map(
+                      (destination, index) => (
+                        <React.Fragment key={destination.id}>
+                          <View style={styles.locationItem}>
+                            <View style={styles.locationIconContainer}>
+                              <Ionicons
+                                name="arrow-down-circle"
+                                size={24}
+                                color={
+                                  destination.delivered ? "#00AA66" : "#FFA500"
+                                }
+                              />
+                            </View>
+                            <View style={styles.locationInfo}>
+                              <View
+                                style={{
+                                  flexDirection: "row",
+                                  alignItems: "center",
+                                  gap: 8,
+                                }}
+                              >
+                                <Text style={styles.locationLabel}>
+                                  Drop-off {index + 1}
+                                </Text>
+                                {destination.delivered && (
+                                  <Ionicons
+                                    name="checkmark-circle"
+                                    size={16}
+                                    color="#00AA66"
+                                  />
+                                )}
+                              </View>
+                              <Text style={styles.locationText}>
+                                {destination.dropOffLocation.address}
+                              </Text>
+                              <Text
+                                style={[styles.locationLabel, { marginTop: 4 }]}
+                              >
+                                {destination.recipient.name} •{" "}
+                                {destination.recipient.phone}
+                              </Text>
+                              <Text
+                                style={[styles.locationLabel, { marginTop: 2 }]}
+                              >
+                                {destination.distanceFromPickupKm.toFixed(2)} km
+                                • ₦{destination.deliveryFee.toLocaleString()}
+                              </Text>
+
+                              {/* Mark as Delivered Button */}
+                              {!destination.delivered &&
+                                status !== "delivered" && (
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.markDeliveredBtn,
+                                      markingDelivered === destination.id &&
+                                        styles.markDeliveredBtnDisabled,
+                                    ]}
+                                    onPress={() =>
+                                      handleMarkAsDelivered(destination.id)
+                                    }
+                                    disabled={
+                                      markingDelivered === destination.id
+                                    }
+                                  >
+                                    {markingDelivered === destination.id ? (
+                                      <View style={styles.loadingContainer}>
+                                        <ActivityIndicator
+                                          color="#fff"
+                                          size="small"
+                                        />
+                                        <Text
+                                          style={[
+                                            styles.markDeliveredText,
+                                            { marginLeft: 6 },
+                                          ]}
+                                        >
+                                          Marking...
+                                        </Text>
+                                      </View>
+                                    ) : (
+                                      <View style={styles.loadingContainer}>
+                                        <Ionicons
+                                          name="checkmark-circle"
+                                          size={18}
+                                          color="#fff"
+                                        />
+                                        <Text
+                                          style={[
+                                            styles.markDeliveredText,
+                                            { marginLeft: 6 },
+                                          ]}
+                                        >
+                                          Mark as Delivered
+                                        </Text>
+                                      </View>
+                                    )}
+                                  </TouchableOpacity>
+                                )}
+
+                              {destination.delivered &&
+                                destination.deliveredAt && (
+                                  <Text
+                                    style={[
+                                      styles.locationLabel,
+                                      { marginTop: 4, color: "#00AA66" },
+                                    ]}
+                                  >
+                                    ✓ Delivered at{" "}
+                                    {new Date(
+                                      destination.deliveredAt,
+                                    ).toLocaleString()}
+                                  </Text>
+                                )}
+                            </View>
+                          </View>
+                          {index <
+                            activeOrder.deliveryDestinations.length - 1 && (
+                            <View style={styles.locationConnector} />
+                          )}
+                        </React.Fragment>
+                      ),
+                    )}
+                  </>
+                ) : (
+                  <View style={styles.locationItem}>
+                    <View style={styles.locationIconContainer}>
+                      <Ionicons
+                        name="arrow-down-circle"
+                        size={24}
+                        color="#00AA66"
+                      />
+                    </View>
+                    <View style={styles.locationInfo}>
+                      <Text style={styles.locationLabel}>
+                        Drop-off Location
+                      </Text>
+                      <Text style={styles.locationText}>
+                        {activeOrder.dropOffLocation.address}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.locationInfo}>
-                    <Text style={styles.locationLabel}>Drop-off Location</Text>
-                    <Text style={styles.locationText}>
-                      {activeOrder.dropOffLocation.address}
-                    </Text>
-                  </View>
-                </View>
+                )}
               </View>
             </View>
 
@@ -521,13 +707,24 @@ export default function ActiveDeliveryCard({
               <>
                 <View style={styles.dividerLine} />
                 <View style={styles.sectionContainer}>
+                  {shouldDisableContinue() && (
+                    <View style={styles.warningContainer}>
+                      <Ionicons name="warning" size={20} color="#FF6B35" />
+                      <Text style={styles.warningText}>
+                        Please mark all destinations as delivered before
+                        completing the order
+                      </Text>
+                    </View>
+                  )}
+
                   <TouchableOpacity
                     style={[
                       styles.actionBtn,
-                      updatingStatus && styles.actionBtnDisabled,
+                      (updatingStatus || shouldDisableContinue()) &&
+                        styles.actionBtnDisabled,
                     ]}
                     onPress={onNextStatus}
-                    disabled={updatingStatus}
+                    disabled={updatingStatus || shouldDisableContinue()}
                   >
                     {updatingStatus ? (
                       <View style={styles.loadingContainer}>
@@ -813,5 +1010,39 @@ const styles = StyleSheet.create({
   },
   copyButton: {
     padding: 4,
+  },
+  markDeliveredBtn: {
+    backgroundColor: "#00AA66",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  markDeliveredBtnDisabled: {
+    backgroundColor: "#ccc",
+    opacity: 0.6,
+  },
+  markDeliveredText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 13,
+  },
+  warningContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF3E0",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 8,
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 13,
+    color: "#FF6B35",
+    fontWeight: "500",
   },
 });

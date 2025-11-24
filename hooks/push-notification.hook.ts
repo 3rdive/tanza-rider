@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Platform } from "expo-modules-core";
 import { userService } from "@/lib/api";
 import { StorageMechanics } from "@/lib/storage-mechanics";
+import { router } from "expo-router";
 
 export interface PushNotificationState {
   notification?: Notifications.Notification;
@@ -33,11 +34,14 @@ export const usePushNotification = (): PushNotificationState => {
   const responseListener = useRef<Notifications.Subscription | null>(null);
 
   const registerForPushNotification = async () => {
+    console.log("Registering for push notifications...");
     let token;
 
-    if (Device.isDevice) {
+    if (Device.isDevice || Platform.OS === "android") {
       const { status: existingStatus } =
         await Notifications.getPermissionsAsync();
+
+      console.log("Existing permission status:", existingStatus);
 
       let finalStatus = existingStatus;
 
@@ -46,13 +50,24 @@ export const usePushNotification = (): PushNotificationState => {
         finalStatus = status;
       }
 
+      console.log("Final permission status:", finalStatus);
+
       if (finalStatus !== "granted") {
         alert("We need access to keep you updated on your orders");
+        return;
       }
 
-      token = await Notifications.getExpoPushTokenAsync({
-        projectId: Constants.expoConfig?.extra?.eas?.projectId,
-      });
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+      console.log("Project ID:", projectId);
+
+      try {
+        token = await Notifications.getExpoPushTokenAsync({
+          projectId,
+        });
+        console.log("Push token obtained:", token);
+      } catch (e) {
+        console.log("Error getting push token:", e);
+      }
 
       if (Platform.OS === "android") {
         Notifications.setNotificationChannelAsync("default", {
@@ -65,37 +80,43 @@ export const usePushNotification = (): PushNotificationState => {
 
       return token;
     } else {
-      console.log("ERROR: Please use a physical device");
+      console.log(
+        "ERROR: Push notifications are not supported on iOS simulators",
+      );
     }
   };
 
   useEffect(() => {
-    registerForPushNotification().then(async (token) => {
-      setExpoPushToken(token);
-      if (!token) return;
+    registerForPushNotification()
+      .then(async (token) => {
+        setExpoPushToken(token);
+        if (!token) return;
 
-      const tokenValue =
-        (token as Notifications.ExpoPushToken)?.data ??
-        (typeof token === "string" ? token : JSON.stringify(token));
+        const tokenValue =
+          (token as Notifications.ExpoPushToken)?.data ??
+          (typeof token === "string" ? token : JSON.stringify(token));
 
-      try {
-        // Only update the backend if it's been at least 7 days since last successful registration
-        const shouldUpdate =
-          await StorageMechanics.shouldUpdatePushRegistration(7);
-        if (!shouldUpdate) {
-          return;
+        try {
+          // Only update the backend if it's been at least 7 days since last successful registration
+          const shouldUpdate =
+            await StorageMechanics.shouldUpdatePushRegistration(7);
+          if (!shouldUpdate) {
+            return;
+          }
+
+          await userService.updatePushNotificationToken({
+            expoPushNotificationToken: tokenValue,
+          });
+
+          // Persist the timestamp of the last successful registration
+          await StorageMechanics.setLastPushRegistration(Date.now());
+        } catch (err) {
+          console.log("Failed to register push token:", err);
         }
-
-        await userService.updatePushNotificationToken({
-          expoPushNotificationToken: tokenValue,
-        });
-
-        // Persist the timestamp of the last successful registration
-        await StorageMechanics.setLastPushRegistration(Date.now());
-      } catch (err) {
-        console.log("Failed to register push token:", err);
-      }
-    });
+      })
+      .catch((error: any) => {
+        setExpoPushToken(undefined);
+      });
 
     notificationListener.current =
       Notifications.addNotificationReceivedListener((notification) => {
@@ -104,7 +125,11 @@ export const usePushNotification = (): PushNotificationState => {
 
     responseListener.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
-        console.log(response);
+        console.log("response from click", JSON.stringify(response));
+        const data = response.notification.request.content.data;
+        if (data?.route) {
+          router.push(data.route as any);
+        }
       });
 
     return () => {

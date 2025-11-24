@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, isAxiosError } from "axios";
 
-export const BASE_URL = "http://localhost:3030";
+export const BASE_URL = "http://localhost:3000";
 export const AXIOS: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 30000,
@@ -494,12 +494,34 @@ export interface IOrderLocation {
   longitude: string;
 }
 
+export interface IRecipient {
+  name: string;
+  role: string;
+  email: string;
+  phone: string;
+}
+
+export interface IDeliveryDestination {
+  id: string;
+  orderId: string;
+  dropOffLocation: IOrderLocation;
+  recipient: IRecipient;
+  distanceFromPickupKm: number;
+  durationFromPickup: string;
+  deliveryFee: number;
+  delivered: boolean;
+  deliveredAt: string | null;
+  createdAt: string;
+}
+
 export interface IOrderDetail {
   id: string;
   sender: any;
   recipient: any;
   pickUpLocation: IOrderLocation;
   dropOffLocation: IOrderLocation;
+  deliveryDestinations: IDeliveryDestination[];
+  hasMultipleDeliveries: boolean;
   userOrderRole: string;
   vehicleType: string;
   noteForRider: string;
@@ -511,10 +533,13 @@ export interface IOrderDetail {
   userId: string;
   createdAt: string;
   updatedAt: string;
-  riderId: string;
+  riderId: string | null;
   riderAssigned: boolean;
-  riderAssignedAt: string;
+  riderAssignedAt: string | null;
   hasRewardedRider: boolean;
+  declinedRiderIds: string[];
+  distanceInKm: number;
+  isUrgent: boolean;
 }
 
 export type OrderTrackingStatus =
@@ -565,6 +590,8 @@ export interface IActiveOrder {
     email: string;
     phone: string;
   };
+  hasMultipleDeliveries: boolean;
+  deliveryDestinations: IDeliveryDestination[];
 }
 
 export interface IAssignedOrder {
@@ -584,9 +611,11 @@ export interface IAssignedOrder {
     longitude: string;
   };
   eta: string;
-  amount: number;
-  distanceInKm: string;
+  distanceInKm: number;
   isUrgent: boolean;
+  amount: number;
+  hasMultipleDeliveries: boolean;
+  deliveryDestinations: IDeliveryDestination[];
 }
 
 export interface IRiderFeedbackPayload {
@@ -678,12 +707,30 @@ export const orderService = {
     );
     return data;
   },
+  /**
+   * Mark a delivery destination as delivered
+   */
+  markDestinationAsDelivered: async (
+    payload: IMarkDestinationDeliveredPayload,
+  ) => {
+    const { data } = await AXIOS.post<IApiResponse<any>>(
+      "/api/v1/order/destination/delivered",
+      payload,
+      { headers: { "Content-Type": "application/json" } },
+    );
+    return data;
+  },
 } as const;
 
 export interface ICreateOrderTrackingPayload {
   orderId: string;
   note?: string;
   status: OrderTrackingStatus;
+}
+
+export interface IMarkDestinationDeliveredPayload {
+  orderId: string;
+  destinationId: string;
 }
 
 export interface ILocationFeatureProperties {

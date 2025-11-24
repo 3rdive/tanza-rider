@@ -149,7 +149,7 @@ export default function HomeScreen() {
     if (tasks.length > 0) {
       // Find the first review_request task
       const reviewTask = tasks.find(
-        (task) => task.category === "request_review"
+        (task) => task.category === "request_review",
       );
 
       if (reviewTask) {
@@ -206,7 +206,7 @@ export default function HomeScreen() {
       console.error("Error submitting review:", error);
       Alert.alert(
         "Error",
-        error?.message || "Failed to submit review. Please try again."
+        error?.message || "Failed to submit review. Please try again.",
       );
     }
   };
@@ -229,7 +229,7 @@ export default function HomeScreen() {
       setCurrentReviewTask(null);
       try {
         await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Warning
+          Haptics.NotificationFeedbackType.Warning,
         );
       } catch {}
     }
@@ -247,7 +247,7 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       refetchOrders();
-    }, [refetchOrders])
+    }, [refetchOrders]),
   );
 
   const nextStatus = async () => {
@@ -272,22 +272,22 @@ export default function HomeScreen() {
         setStatus(newStatus);
 
         // Refetch active orders to get updated data
-        await refetchOrders();
+        refetchOrders();
 
         // Vibrate on success
         await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success
+          Haptics.NotificationFeedbackType.Success,
         );
 
         Alert.alert(
           "Success",
-          `Order status updated to ${newStatus.replace("_", " ")}`
+          `Order status updated to ${newStatus.replace("_", " ")}`,
         );
       } catch (error: any) {
         console.error("Error updating order status:", error);
         Alert.alert(
           "Error",
-          error?.response?.data?.message || "Failed to update order status"
+          error?.response?.data?.message || "Failed to update order status",
         );
       } finally {
         setUpdatingStatus(false);
@@ -310,21 +310,47 @@ export default function HomeScreen() {
     : status;
 
   // Map coordinates from active order
-  const pickupCoords = currentActiveOrder
-    ? {
-        latitude: parseFloat(currentActiveOrder.pickUpLocation.latitude),
-        longitude: parseFloat(currentActiveOrder.pickUpLocation.longitude),
-      }
-    : { latitude: 37.78825, longitude: -122.4324 };
+  const pickupCoords = React.useMemo(
+    () =>
+      currentActiveOrder
+        ? {
+            latitude: parseFloat(currentActiveOrder.pickUpLocation.latitude),
+            longitude: parseFloat(currentActiveOrder.pickUpLocation.longitude),
+          }
+        : { latitude: 37.78825, longitude: -122.4324 },
+    [currentActiveOrder],
+  );
 
-  const dropoffCoords = currentActiveOrder
-    ? {
-        latitude: parseFloat(currentActiveOrder.dropOffLocation.latitude),
-        longitude: parseFloat(currentActiveOrder.dropOffLocation.longitude),
-      }
-    : { latitude: 37.75825, longitude: -122.4524 };
+  const dropoffCoords = React.useMemo(
+    () =>
+      currentActiveOrder
+        ? {
+            latitude: parseFloat(currentActiveOrder.dropOffLocation.latitude),
+            longitude: parseFloat(currentActiveOrder.dropOffLocation.longitude),
+          }
+        : { latitude: 37.75825, longitude: -122.4524 },
+    [currentActiveOrder],
+  );
 
-  // Calculate map region to fit both markers
+  // Get all delivery destination coordinates for multi-delivery orders
+  const deliveryDestinationCoords = React.useMemo(() => {
+    if (
+      currentActiveOrder?.hasMultipleDeliveries &&
+      currentActiveOrder?.deliveryDestinations
+    ) {
+      return currentActiveOrder.deliveryDestinations.map((dest) => ({
+        latitude: parseFloat(dest.dropOffLocation.latitude),
+        longitude: parseFloat(dest.dropOffLocation.longitude),
+        address: dest.dropOffLocation.address,
+        recipient: dest.recipient.name,
+        delivered: dest.delivered,
+        id: dest.id,
+      }));
+    }
+    return [];
+  }, [currentActiveOrder]);
+
+  // Calculate map region to fit all markers (pickup + all destinations)
   const mapRegion = React.useMemo(() => {
     // If no active order, center on rider location
     if (!currentActiveOrder && latitude !== null && longitude !== null) {
@@ -336,6 +362,37 @@ export default function HomeScreen() {
       };
     }
 
+    // For multi-delivery orders, calculate bounds for all destinations
+    if (deliveryDestinationCoords.length > 0) {
+      const allCoords = [pickupCoords, ...deliveryDestinationCoords];
+      const lats = allCoords.map((c) => c.latitude);
+      const lons = allCoords.map((c) => c.longitude);
+
+      const minLat = Math.min(...lats);
+      const maxLat = Math.max(...lats);
+      const minLon = Math.min(...lons);
+      const maxLon = Math.max(...lons);
+
+      const latDelta = maxLat - minLat;
+      const lonDelta = maxLon - minLon;
+
+      // Add padding (1.5x the delta or minimum 0.02)
+      const latitudeDelta = Math.max(latDelta * 1.5, 0.02);
+      const longitudeDelta = Math.max(lonDelta * 1.5, 0.02);
+
+      // Center of all points
+      const centerLat = (minLat + maxLat) / 2;
+      const centerLon = (minLon + maxLon) / 2;
+
+      return {
+        latitude: centerLat,
+        longitude: centerLon,
+        latitudeDelta,
+        longitudeDelta,
+      };
+    }
+
+    // For single delivery, use pickup and dropoff
     const latDelta = Math.abs(pickupCoords.latitude - dropoffCoords.latitude);
     const lonDelta = Math.abs(pickupCoords.longitude - dropoffCoords.longitude);
 
@@ -357,10 +414,9 @@ export default function HomeScreen() {
     currentActiveOrder,
     latitude,
     longitude,
-    pickupCoords.latitude,
-    pickupCoords.longitude,
-    dropoffCoords.latitude,
-    dropoffCoords.longitude,
+    pickupCoords,
+    dropoffCoords,
+    deliveryDestinationCoords,
   ]);
 
   // Pulsing animation for rider marker when no active order
@@ -378,7 +434,7 @@ export default function HomeScreen() {
             duration: 1000,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       );
       pulse.start();
       return () => pulse.stop();
@@ -468,16 +524,50 @@ export default function HomeScreen() {
         {currentActiveOrder && (
           <>
             <Marker coordinate={pickupCoords} title="Pickup" pinColor="green" />
-            <Marker
-              coordinate={dropoffCoords}
-              title="Drop-off"
-              pinColor="red"
-            />
-            <Polyline
-              coordinates={[pickupCoords, dropoffCoords]}
-              strokeColor="#00AA66"
-              strokeWidth={4}
-            />
+
+            {/* Multiple delivery destinations */}
+            {deliveryDestinationCoords.length > 0 ? (
+              <>
+                {deliveryDestinationCoords.map((dest, index) => (
+                  <Marker
+                    key={dest.id}
+                    coordinate={{
+                      latitude: dest.latitude,
+                      longitude: dest.longitude,
+                    }}
+                    title={`Drop-off ${index + 1}`}
+                    description={`${dest.recipient} - ${dest.address}`}
+                    pinColor={dest.delivered ? "#00AA66" : "red"}
+                  />
+                ))}
+                {/* Draw polylines from pickup to each destination */}
+                {deliveryDestinationCoords.map((dest) => (
+                  <Polyline
+                    key={`line-${dest.id}`}
+                    coordinates={[
+                      pickupCoords,
+                      { latitude: dest.latitude, longitude: dest.longitude },
+                    ]}
+                    strokeColor={dest.delivered ? "#00AA66" : "#FFA500"}
+                    strokeWidth={3}
+                    lineDashPattern={[5, 5]}
+                  />
+                ))}
+              </>
+            ) : (
+              <>
+                <Marker
+                  coordinate={dropoffCoords}
+                  title="Drop-off"
+                  pinColor="red"
+                />
+                <Polyline
+                  coordinates={[pickupCoords, dropoffCoords]}
+                  strokeColor="#00AA66"
+                  strokeWidth={4}
+                />
+              </>
+            )}
           </>
         )}
       </MapView>
@@ -512,6 +602,7 @@ export default function HomeScreen() {
             onCopy={handleCopy}
             activeOrder={currentActiveOrder}
             updatingStatus={updatingStatus}
+            onRefetchOrders={refetchOrders}
           />
         </ScrollView>
       </View>

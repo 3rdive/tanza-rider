@@ -29,6 +29,7 @@ import {
   WEEK_FILTER_OPTIONS,
   WALLET_COLORS,
 } from "../../lib/walletConstants";
+import WalletBalanceCard from "@/components/fund_account/WalletBalanceCard";
 
 const RiderWalletScreen: React.FC = () => {
   const {
@@ -61,7 +62,7 @@ const RiderWalletScreen: React.FC = () => {
     const todayStart = new Date(
       now.getFullYear(),
       now.getMonth(),
-      now.getDate()
+      now.getDate(),
     );
 
     // helper to get days ago
@@ -129,7 +130,6 @@ const RiderWalletScreen: React.FC = () => {
       </View>
 
       <View>
-        <AddMoneyButton onPress={() => router.push("/payment/methods")} />
 
         {/* Wallet Balance Summary */}
         {isLoadingWallet ? (
@@ -151,10 +151,9 @@ const RiderWalletScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         ) : (
-          <BalanceSummary
-            availableBalance={walletData?.walletBalance || 0}
-            totalExpenditure={walletData?.totalAmountEarned || 0}
-          />
+          <View style={{ padding: 16 }}>
+            <WalletBalanceCard balance={walletData?.walletBalance || 0} />
+          </View>
         )}
       </View>
 
@@ -169,12 +168,12 @@ const RiderWalletScreen: React.FC = () => {
             {selectedWeekOption === WEEK_FILTER_OPTIONS.this_week
               ? "This Week"
               : selectedWeekOption === WEEK_FILTER_OPTIONS.last_week
-              ? "Last Week"
-              : selectedWeekOption === WEEK_FILTER_OPTIONS.last_2_weeks
-              ? "Last 2 Weeks"
-              : selectedWeekOption === WEEK_FILTER_OPTIONS.last_4_weeks
-              ? "Last 4 Weeks"
-              : "All"}
+                ? "Last Week"
+                : selectedWeekOption === WEEK_FILTER_OPTIONS.last_2_weeks
+                  ? "Last 2 Weeks"
+                  : selectedWeekOption === WEEK_FILTER_OPTIONS.last_4_weeks
+                    ? "Last 4 Weeks"
+                    : "All"}
           </Text>
           <Ionicons name="chevron-down" size={16} color="#00B624" />
         </TouchableOpacity>

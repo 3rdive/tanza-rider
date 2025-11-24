@@ -43,7 +43,7 @@ export default function DeliveryRequestSnackbar() {
   const [timeLeft, setTimeLeft] = useState(30);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoDeclineTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
+    null,
   );
 
   // Convert IAssignedOrder to the format expected by useDeliveryRequest
@@ -58,8 +58,10 @@ export default function DeliveryRequestSnackbar() {
       packageType: "Package", //
       isUrgent: order.isUrgent,
       timeAgo: "Just now",
+      hasMultipleDeliveries: order.hasMultipleDeliveries,
+      deliveryDestinations: order.deliveryDestinations,
     }),
-    []
+    [],
   );
 
   // Clear timer when component unmounts or request is handled
@@ -132,7 +134,7 @@ export default function DeliveryRequestSnackbar() {
     setTimeout(() => {
       if (isActive && assignedOrders.length > 0) {
         const nextOrder = assignedOrders.find(
-          (order) => !processedOrdersRef.current.has(order.id)
+          (order) => !processedOrdersRef.current.has(order.id),
         );
         if (nextOrder) {
           processedOrdersRef.current.add(nextOrder.id);
@@ -356,14 +358,44 @@ export default function DeliveryRequestSnackbar() {
                 <Text style={styles.snackbarLocationText}>
                   📍 {currentRequest.pickupLocation}
                 </Text>
-                <Text style={styles.snackbarLocationText}>
-                  📍 {currentRequest.dropoffLocation}
-                </Text>
+                {currentRequest.hasMultipleDeliveries &&
+                currentRequest.deliveryDestinations &&
+                currentRequest.deliveryDestinations.length > 0 ? (
+                  <>
+                    <Text
+                      style={[
+                        styles.snackbarLocationText,
+                        { fontWeight: "600", marginTop: 4 },
+                      ]}
+                    >
+                      {currentRequest.deliveryDestinations.length} Drop-off
+                      Locations
+                    </Text>
+                    {currentRequest.deliveryDestinations.map(
+                      (dest: any, idx: number) => (
+                        <Text
+                          key={dest.id}
+                          style={[
+                            styles.snackbarLocationText,
+                            { fontSize: 11, paddingLeft: 12 },
+                          ]}
+                        >
+                          {idx + 1}. {dest.dropOffLocation.address}
+                        </Text>
+                      ),
+                    )}
+                  </>
+                ) : (
+                  <Text style={styles.snackbarLocationText}>
+                    📍 {currentRequest.dropoffLocation}
+                  </Text>
+                )}
               </View>
 
               <View style={styles.snackbarFooter}>
                 <Text style={styles.snackbarDistance}>
-                  {currentRequest.distance} KM
+                  {currentRequest.distance.toFixed(2)} KM
+                  {currentRequest.hasMultipleDeliveries && " (total)"}
                 </Text>
                 <Text style={styles.snackbarEarning}>
                   ₦{currentRequest.estimatedEarning?.toLocaleString()}

@@ -13,12 +13,13 @@ import { useOrders, OrderTab } from "@/hooks/useOrders";
 import { IOrderHistoryItem, orderService } from "@/lib/api";
 import { useAlert } from "@/hooks/useAlert";
 import { tzColors } from "@/theme/color";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 
 export default function HistoryScreen() {
   const router = useRouter();
   const alert = useAlert();
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const {
     orders,
@@ -34,10 +35,19 @@ export default function HistoryScreen() {
   } = useOrders();
 
   useEffect(() => {
-    // Initial fetch
+    // Check if tab parameter is provided in URL
+    if (tab) {
+      const normalizedTab =
+        tab.charAt(0).toUpperCase() + tab.slice(1).toLowerCase();
+      if (["Upcoming", "Ongoing", "Completed"].includes(normalizedTab)) {
+        changeTab(normalizedTab as OrderTab);
+        return;
+      }
+    }
+    // Default to Ongoing if no valid tab parameter
     changeTab("Ongoing");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [tab]);
 
   // Prevent screenshots
   useEffect(() => {
@@ -190,8 +200,8 @@ export default function HistoryScreen() {
           {activeTab === "Upcoming"
             ? "You don't have any upcoming orders"
             : activeTab === "Ongoing"
-            ? "You don't have any ongoing deliveries"
-            : "You haven't completed any orders yet"}
+              ? "You don't have any ongoing deliveries"
+              : "You haven't completed any orders yet"}
         </Text>
       </View>
     );

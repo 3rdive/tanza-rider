@@ -10,10 +10,10 @@ node_modules/
 .idea/
 .vscode/
 .DS_Store
-android/
-ios/
 dist/
 build/
 *.log
 .env
 .env.local
+/ios
+/android
