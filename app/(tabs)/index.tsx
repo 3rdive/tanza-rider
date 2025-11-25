@@ -8,15 +8,10 @@ import {
   Alert,
   Switch,
   Animated,
-  Easing,
   RefreshControl,
+  Dimensions,
 } from "react-native";
-import MapView, {
-  Marker,
-  Polyline,
-  PROVIDER_DEFAULT,
-  UrlTile,
-} from "react-native-maps";
+import { LeafletView } from "react-native-leaflet-view";
 import * as Haptics from "expo-haptics";
 import ReviewBottomSheet from "../../components/review-bottom-sheet";
 import DocumentStatusBanner from "../../components/DocumentStatusBanner";
@@ -34,6 +29,7 @@ import {
 } from "@/lib/api";
 import { useDeviceLocation } from "@/hooks/location.hook";
 import { useTasks } from "@/hooks/useTasks";
+import { useUser } from "@/redux/hooks/hooks";
 
 export default function HomeScreen() {
   const [status, setStatus] = useState<OrderTrackingStatus>("accepted");
@@ -67,11 +63,11 @@ export default function HomeScreen() {
     refetch: refetchOrders,
   } = useActiveOrders();
   const { latitude, longitude } = useDeviceLocation();
+  const { user } = useUser();
 
   // Poll for pending tasks every 30 seconds
   const { tasks, completeTask, cancelTask } = useTasks({ status: "pending" });
 
-  const [headerHidden, setHeaderHidden] = useState(false);
   const [currentReviewTask, setCurrentReviewTask] = useState<{
     taskId: string;
     user: { name: string; avatar?: string; userId: string };
@@ -80,66 +76,6 @@ export default function HomeScreen() {
 
   const handleToggleOnline = (value: boolean) => {
     setActive(value);
-  };
-
-  const hideHeader = useCallback(() => {
-    setHeaderHidden(true);
-    // smooth hide with easing
-    Animated.timing(headerAnim, {
-      toValue: 1,
-      duration: 420,
-      easing: Easing.inOut(Easing.ease),
-      useNativeDriver: false,
-    }).start();
-  }, [headerAnim]);
-
-  const showHeader = useCallback(() => {
-    setHeaderHidden(false);
-    // smooth show with easing
-    Animated.timing(headerAnim, {
-      toValue: 0,
-      duration: 420,
-      easing: Easing.inOut(Easing.ease),
-      useNativeDriver: false,
-    }).start();
-  }, [headerAnim]);
-
-  // Debounced region-change handler (fires while map is moving)
-  const regionChangeTimeout = useRef<number | null>(null);
-  const handleRegionChange = () => {
-    // user is moving map: hide header immediately
-    hideHeader();
-    // clear any existing timeout
-    if (regionChangeTimeout.current) {
-      clearTimeout(regionChangeTimeout.current as unknown as number);
-    }
-    // show header after short pause in movement
-    regionChangeTimeout.current = setTimeout(() => {
-      showHeader();
-      regionChangeTimeout.current = null;
-    }, 700) as unknown as number;
-    console.debug("handleRegionChange fired");
-  };
-
-  // cleanup timeout on unmount
-  React.useEffect(() => {
-    return () => {
-      if (regionChangeTimeout.current) {
-        clearTimeout(regionChangeTimeout.current as unknown as number);
-      }
-    };
-  }, []);
-
-  const statuses = [
-    { label: "pending", color: "#FFA500" },
-    { label: "accepted", color: "#007bff" },
-    { label: "picked_up", color: "#ff9500" },
-    { label: "transit", color: "#2196F3" },
-    { label: "delivered", color: "#9c27b0" },
-  ];
-
-  const handleCopy = (text: string) => {
-    Clipboard.setString(text);
   };
 
   const [showReview, setShowReview] = useState(false);
@@ -250,6 +186,18 @@ export default function HomeScreen() {
     }, [refetchOrders]),
   );
 
+  const statuses = [
+    { label: "pending", color: "#FFA500" },
+    { label: "accepted", color: "#007bff" },
+    { label: "picked_up", color: "#ff9500" },
+    { label: "transit", color: "#2196F3" },
+    { label: "delivered", color: "#9c27b0" },
+  ];
+
+  const handleCopy = (text: string) => {
+    Clipboard.setString(text);
+  };
+
   const nextStatus = async () => {
     if (!currentActiveOrder) {
       Alert.alert("Error", "No active order to update");
@@ -314,10 +262,10 @@ export default function HomeScreen() {
     () =>
       currentActiveOrder
         ? {
-            latitude: parseFloat(currentActiveOrder.pickUpLocation.latitude),
-            longitude: parseFloat(currentActiveOrder.pickUpLocation.longitude),
+            lat: parseFloat(currentActiveOrder.pickUpLocation.latitude),
+            lng: parseFloat(currentActiveOrder.pickUpLocation.longitude),
           }
-        : { latitude: 37.78825, longitude: -122.4324 },
+        : { lat: 37.78825, lng: -122.4324 },
     [currentActiveOrder],
   );
 
@@ -325,10 +273,10 @@ export default function HomeScreen() {
     () =>
       currentActiveOrder
         ? {
-            latitude: parseFloat(currentActiveOrder.dropOffLocation.latitude),
-            longitude: parseFloat(currentActiveOrder.dropOffLocation.longitude),
+            lat: parseFloat(currentActiveOrder.dropOffLocation.latitude),
+            lng: parseFloat(currentActiveOrder.dropOffLocation.longitude),
           }
-        : { latitude: 37.75825, longitude: -122.4524 },
+        : { lat: 37.75825, lng: -122.4524 },
     [currentActiveOrder],
   );
 
@@ -339,8 +287,8 @@ export default function HomeScreen() {
       currentActiveOrder?.deliveryDestinations
     ) {
       return currentActiveOrder.deliveryDestinations.map((dest) => ({
-        latitude: parseFloat(dest.dropOffLocation.latitude),
-        longitude: parseFloat(dest.dropOffLocation.longitude),
+        lat: parseFloat(dest.dropOffLocation.latitude),
+        lng: parseFloat(dest.dropOffLocation.longitude),
         address: dest.dropOffLocation.address,
         recipient: dest.recipient.name,
         delivered: dest.delivered,
@@ -350,65 +298,123 @@ export default function HomeScreen() {
     return [];
   }, [currentActiveOrder]);
 
+  const getZoomFromDelta = (longitudeDelta: number) => {
+    const screenWidth = Dimensions.get("window").width;
+    return Math.log2(360 * (screenWidth / 256 / longitudeDelta)) + 1;
+  };
+
   // Calculate map region to fit all markers (pickup + all destinations)
-  const mapRegion = React.useMemo(() => {
+  const { mapCenter, zoom, markers, shapes } = React.useMemo(() => {
+    let center = { lat: 37.78825, lng: -122.4324 };
+    let calculatedZoom = 12;
+    const calculatedMarkers: {
+      position: { lat: number; lng: number };
+      icon?: string;
+      size?: [number, number];
+      title?: string;
+      id?: string | number;
+    }[] = [];
+    const calculatedShapes: {
+      shapeType: "polyline" | "polygon";
+      color: string;
+      positions: { lat: number; lng: number }[];
+    }[] = [];
+
     // If no active order, center on rider location
     if (!currentActiveOrder && latitude !== null && longitude !== null) {
-      return {
-        latitude,
-        longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      };
+      center = { lat: latitude, lng: longitude };
+      calculatedZoom = 15;
+      calculatedMarkers.push({
+        position: { lat: latitude, lng: longitude },
+        icon: "https://place-hold.it/32x32/f58686/ffffff?text=U",
+        size: [32, 32],
+        title: "Your Location",
+      });
     }
 
-    // For multi-delivery orders, calculate bounds for all destinations
-    if (deliveryDestinationCoords.length > 0) {
-      const allCoords = [pickupCoords, ...deliveryDestinationCoords];
-      const lats = allCoords.map((c) => c.latitude);
-      const lons = allCoords.map((c) => c.longitude);
+    if (currentActiveOrder) {
+      calculatedMarkers.push({
+        position: pickupCoords,
+        icon: "https://place-hold.it/32x32/00ff00/000000?text=P",
+        size: [32, 32],
+        title: "Pickup",
+      });
 
-      const minLat = Math.min(...lats);
-      const maxLat = Math.max(...lats);
-      const minLon = Math.min(...lons);
-      const maxLon = Math.max(...lons);
+      if (deliveryDestinationCoords.length > 0) {
+        const allCoords = [pickupCoords, ...deliveryDestinationCoords];
+        const lats = allCoords.map((c) => c.lat);
+        const lngs = allCoords.map((c) => c.lng);
 
-      const latDelta = maxLat - minLat;
-      const lonDelta = maxLon - minLon;
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const minLng = Math.min(...lngs);
+        const maxLng = Math.max(...lngs);
 
-      // Add padding (1.5x the delta or minimum 0.02)
-      const latitudeDelta = Math.max(latDelta * 1.5, 0.02);
-      const longitudeDelta = Math.max(lonDelta * 1.5, 0.02);
+        const latDelta = maxLat - minLat;
+        const lngDelta = maxLng - minLng;
 
-      // Center of all points
-      const centerLat = (minLat + maxLat) / 2;
-      const centerLon = (minLon + maxLon) / 2;
+        center = {
+          lat: (minLat + maxLat) / 2,
+          lng: (minLng + maxLng) / 2,
+        };
+        if (lngDelta > 0) {
+          calculatedZoom = getZoomFromDelta(lngDelta);
+        } else if (latDelta > 0) {
+          calculatedZoom = getZoomFromDelta(latDelta);
+        } else {
+          calculatedZoom = 15;
+        }
 
-      return {
-        latitude: centerLat,
-        longitude: centerLon,
-        latitudeDelta,
-        longitudeDelta,
-      };
+        deliveryDestinationCoords.forEach((dest, index) => {
+          calculatedMarkers.push({
+            position: dest,
+            icon: dest.delivered
+              ? "https://place-hold.it/32x32/0000ff/ffffff?text=D"
+              : "https://place-hold.it/32x32/ff0000/000000?text=D",
+            size: [32, 32],
+            title: `Drop-off ${index + 1}`,
+          });
+          calculatedShapes.push({
+            shapeType: "polyline",
+            color: dest.delivered ? "#00AA66" : "#FFA500",
+            positions: [pickupCoords, dest],
+          });
+        });
+      } else {
+        const latDelta = Math.abs(pickupCoords.lat - dropoffCoords.lat);
+        const lngDelta = Math.abs(pickupCoords.lng - dropoffCoords.lng);
+
+        center = {
+          lat: (pickupCoords.lat + dropoffCoords.lat) / 2,
+          lng: (pickupCoords.lng + dropoffCoords.lng) / 2,
+        };
+        if (lngDelta > 0) {
+          calculatedZoom = getZoomFromDelta(lngDelta);
+        } else if (latDelta > 0) {
+          calculatedZoom = getZoomFromDelta(latDelta);
+        } else {
+          calculatedZoom = 15;
+        }
+
+        calculatedMarkers.push({
+          position: dropoffCoords,
+          icon: "https://place-hold.it/32x32/ff0000/000000?text=D",
+          size: [32, 32],
+          title: "Drop-off",
+        });
+        calculatedShapes.push({
+          shapeType: "polyline",
+          color: "#00AA66",
+          positions: [pickupCoords, dropoffCoords],
+        });
+      }
     }
-
-    // For single delivery, use pickup and dropoff
-    const latDelta = Math.abs(pickupCoords.latitude - dropoffCoords.latitude);
-    const lonDelta = Math.abs(pickupCoords.longitude - dropoffCoords.longitude);
-
-    // Add padding (1.5x the delta or minimum 0.02)
-    const latitudeDelta = Math.max(latDelta * 1.5, 0.02);
-    const longitudeDelta = Math.max(lonDelta * 1.5, 0.02);
-
-    // Center between the two points
-    const centerLat = (pickupCoords.latitude + dropoffCoords.latitude) / 2;
-    const centerLon = (pickupCoords.longitude + dropoffCoords.longitude) / 2;
 
     return {
-      latitude: centerLat,
-      longitude: centerLon,
-      latitudeDelta,
-      longitudeDelta,
+      mapCenter: center,
+      zoom: calculatedZoom,
+      markers: calculatedMarkers,
+      shapes: calculatedShapes,
     };
   }, [
     currentActiveOrder,
@@ -454,11 +460,12 @@ export default function HomeScreen() {
             borderBottomColor: headerBorderColor,
           },
         ]}
-        pointerEvents={headerHidden ? "none" : "auto"}
       >
         <View style={styles.headerLeft}>
           <Text style={styles.greeting}>Hello,</Text>
-          <Text style={styles.riderName}>Samuel Rider</Text>
+          <Text style={styles.riderName}>
+            {user?.lastName} {user?.firstName}
+          </Text>
         </View>
         <View style={styles.headerRight}>
           <Text
@@ -480,97 +487,12 @@ export default function HomeScreen() {
       </Animated.View>
 
       {/* Map */}
-      <MapView
-        style={styles.map}
-        provider={PROVIDER_DEFAULT}
-        region={mapRegion}
-        onPanDrag={hideHeader}
-        onRegionChange={handleRegionChange}
-        onRegionChangeComplete={showHeader}
-      >
-        <UrlTile
-          urlTemplate="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          maximumZ={19}
-          zIndex={0}
-        />
-
-        {/* Show rider location when no active order */}
-        {!currentActiveOrder && latitude !== null && longitude !== null && (
-          <Marker coordinate={{ latitude, longitude }} title="Your Location">
-            <Animated.View
-              style={{
-                transform: [{ scale: pulseAnim }],
-              }}
-            >
-              <View
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: 10,
-                  backgroundColor: "#f58686ff",
-                  borderWidth: 3,
-                  borderColor: "#fff",
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 3,
-                }}
-              />
-            </Animated.View>
-          </Marker>
-        )}
-
-        {/* Show pickup/dropoff when there's an active order */}
-        {currentActiveOrder && (
-          <>
-            <Marker coordinate={pickupCoords} title="Pickup" pinColor="green" />
-
-            {/* Multiple delivery destinations */}
-            {deliveryDestinationCoords.length > 0 ? (
-              <>
-                {deliveryDestinationCoords.map((dest, index) => (
-                  <Marker
-                    key={dest.id}
-                    coordinate={{
-                      latitude: dest.latitude,
-                      longitude: dest.longitude,
-                    }}
-                    title={`Drop-off ${index + 1}`}
-                    description={`${dest.recipient} - ${dest.address}`}
-                    pinColor={dest.delivered ? "#00AA66" : "red"}
-                  />
-                ))}
-                {/* Draw polylines from pickup to each destination */}
-                {deliveryDestinationCoords.map((dest) => (
-                  <Polyline
-                    key={`line-${dest.id}`}
-                    coordinates={[
-                      pickupCoords,
-                      { latitude: dest.latitude, longitude: dest.longitude },
-                    ]}
-                    strokeColor={dest.delivered ? "#00AA66" : "#FFA500"}
-                    strokeWidth={3}
-                    lineDashPattern={[5, 5]}
-                  />
-                ))}
-              </>
-            ) : (
-              <>
-                <Marker
-                  coordinate={dropoffCoords}
-                  title="Drop-off"
-                  pinColor="red"
-                />
-                <Polyline
-                  coordinates={[pickupCoords, dropoffCoords]}
-                  strokeColor="#00AA66"
-                  strokeWidth={4}
-                />
-              </>
-            )}
-          </>
-        )}
-      </MapView>
+      <LeafletView
+        mapCenterPosition={mapCenter as any}
+        zoom={zoom as any}
+        mapMarkers={markers as any}
+        mapShapes={shapes as any}
+      />
 
       {/* Bottom Sheet */}
       <View style={styles.sheet}>
@@ -594,7 +516,6 @@ export default function HomeScreen() {
 
           <ActiveDeliveryCard
             status={currentStatus}
-            statuses={statuses}
             onNextStatus={nextStatus}
             loading={ordersLoading}
             error={!!ordersError}
@@ -660,7 +581,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  map: { flex: 1 },
   sheet: {
     position: "absolute",
     bottom: 0,

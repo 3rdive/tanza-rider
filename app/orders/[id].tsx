@@ -15,6 +15,12 @@ import { tzColors } from "@/theme/color";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+/**
+ * Order detail screen with defensive guards to prevent crashes when nested order fields are missing.
+ * - Uses optional chaining and sensible defaults when rendering.
+ * - Guards mapping and array operations against undefined.
+ */
+
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -23,12 +29,13 @@ export default function OrderDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Prevent screenshots
+  // Prevent screenshots (best-effort)
   useEffect(() => {
     const preventScreenshot = async () => {
       try {
         await activateKeepAwakeAsync("prevent-screenshot");
       } catch {
+        // No-op: not available on some platforms
         console.log("Screenshot prevention not available");
       }
     };
@@ -36,24 +43,34 @@ export default function OrderDetailScreen() {
     preventScreenshot();
 
     return () => {
-      deactivateKeepAwake("prevent-screenshot");
+      try {
+        deactivateKeepAwake("prevent-screenshot");
+      } catch {
+        // ignore
+      }
     };
   }, []);
 
   const fetchOrderDetail = async (isRefresh: boolean = false) => {
     try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+
       setError(null);
+      if (!id) {
+        setError("Missing order id");
+        return;
+      }
 
       const response = await orderService.getOrderById(id as string);
-      setOrder(response.data);
+      setOrder(response?.data ?? null);
     } catch (err: any) {
       console.error("Error fetching order details:", err);
-      setError(err?.response?.data?.message || "Failed to load order details");
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to load order details",
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -61,9 +78,7 @@ export default function OrderDetailScreen() {
   };
 
   useEffect(() => {
-    if (id) {
-      fetchOrderDetail();
-    }
+    if (id) fetchOrderDetail();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -71,8 +86,10 @@ export default function OrderDetailScreen() {
     fetchOrderDetail(true);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+  const safeToLower = (s?: string) => (s ? s.toLowerCase() : "");
+
+  const getStatusColor = (status?: string) => {
+    switch (safeToLower(status)) {
       case "delivered":
         return "#00B624";
       case "cancelled":
@@ -87,8 +104,8 @@ export default function OrderDetailScreen() {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
+  const getStatusIcon = (status?: string) => {
+    switch (safeToLower(status)) {
       case "delivered":
         return "checkmark-circle";
       case "cancelled":
@@ -104,15 +121,19 @@ export default function OrderDetailScreen() {
     }
   };
 
-  const formatStatus = (status: string) => {
+  const formatStatus = (status?: string) => {
+    if (!status) return "Pending";
     return status
       .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : ""))
       .join(" ");
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) return "N/A";
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return "N/A";
+    return d.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -122,17 +143,21 @@ export default function OrderDetailScreen() {
   };
 
   const getCurrentStatus = () => {
-    if (!order?.orderTracking || order.orderTracking.length === 0) {
+    const tracking = order?.orderTracking;
+    if (!Array.isArray(tracking) || tracking.length === 0) {
       return "pending";
     }
-    return order.orderTracking[order.orderTracking.length - 1].status;
+    // guard each element for status
+    const last = tracking[tracking.length - 1];
+    return last?.status ?? "pending";
   };
 
   const isCompleted = () => {
-    const status = getCurrentStatus().toLowerCase();
+    const status = safeToLower(getCurrentStatus());
     return status === "delivered" || status === "cancelled";
   };
 
+  // Early UI states
   if (loading && !order) {
     return (
       <View style={styles.centerContainer}>
@@ -169,8 +194,22 @@ export default function OrderDetailScreen() {
 
   const completed = isCompleted();
 
+  // Helper safe getters for numbers and strings
+  const safeNumber = (n?: number | null) => (typeof n === "number" ? n : 0);
+  const safeString = (s?: string | null) => (s ? s : "N/A");
+
+  // Delivery destinations (may be undefined)
+  const deliveryDestinations = Array.isArray(order.deliveryDestinations)
+    ? order.deliveryDestinations
+    : [];
+
+  // Order tracking (guarded)
+  const orderTracking = Array.isArray(order.orderTracking)
+    ? order.orderTracking
+    : [];
+
   return (
-    <SafeAreaView>
+    <SafeAreaView style={{ flex: 1 }}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -201,7 +240,9 @@ export default function OrderDetailScreen() {
             <View style={styles.orderHeader}>
               <View>
                 <Text style={styles.orderIdLabel}>Order ID</Text>
-                <Text style={styles.orderId}>#{order.id.slice(0, 8)}</Text>
+                <Text style={styles.orderId}>
+                  #{safeString(order.id).slice(0, 8)}
+                </Text>
               </View>
               <View
                 style={[
@@ -239,7 +280,7 @@ export default function OrderDetailScreen() {
             {order.eta && !completed && (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>ETA</Text>
-                <Text style={styles.infoValue}>{order.eta}</Text>
+                <Text style={styles.infoValue}>{safeString(order.eta)}</Text>
               </View>
             )}
 
@@ -253,7 +294,7 @@ export default function OrderDetailScreen() {
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Vehicle Type</Text>
               <Text style={styles.infoValue}>
-                {order.vehicleType.toUpperCase()}
+                {safeString(order.vehicleType).toUpperCase()}
               </Text>
             </View>
           </View>
@@ -274,7 +315,8 @@ export default function OrderDetailScreen() {
                 <View style={styles.locationDetails}>
                   <Text style={styles.locationLabel}>Pickup Location</Text>
                   <Text style={styles.locationAddress}>
-                    {order.pickUpLocation.address}
+                    {order.pickUpLocation?.address ??
+                      "Pickup address unavailable"}
                   </Text>
                 </View>
               </View>
@@ -283,18 +325,17 @@ export default function OrderDetailScreen() {
 
               {/* Multiple Delivery Destinations */}
               {order.hasMultipleDeliveries &&
-              order.deliveryDestinations &&
-              order.deliveryDestinations.length > 0 ? (
+              deliveryDestinations.length > 0 ? (
                 <>
-                  {order.deliveryDestinations.map((destination, index) => (
-                    <React.Fragment key={destination.id}>
+                  {deliveryDestinations.map((destination, index) => (
+                    <React.Fragment key={destination?.id ?? index}>
                       <View style={styles.locationItem}>
                         <View style={styles.locationIconContainer}>
                           <Ionicons
                             name="flag"
                             size={20}
                             color={
-                              destination.delivered ? "#00B624" : "#FF4C4C"
+                              destination?.delivered ? "#00B624" : "#FF4C4C"
                             }
                           />
                         </View>
@@ -310,7 +351,7 @@ export default function OrderDetailScreen() {
                             <Text style={styles.locationLabel}>
                               Drop-off {index + 1}
                             </Text>
-                            {destination.delivered && (
+                            {destination?.delivered && (
                               <Ionicons
                                 name="checkmark-circle"
                                 size={16}
@@ -319,28 +360,34 @@ export default function OrderDetailScreen() {
                             )}
                           </View>
                           <Text style={styles.locationAddress}>
-                            {destination.dropOffLocation.address}
+                            {destination?.dropOffLocation?.address ??
+                              "Address unavailable"}
                           </Text>
-                          <Text
-                            style={[
-                              styles.locationLabel,
-                              { marginTop: 6, color: "#666" },
-                            ]}
-                          >
-                            {destination.recipient.name} •{" "}
-                            {destination.recipient.phone}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.locationLabel,
-                              { marginTop: 4, color: "#666" },
-                            ]}
-                          >
-                            {destination.distanceFromPickupKm.toFixed(2)} km
-                            from pickup • ₦
-                            {destination.deliveryFee.toLocaleString()}
-                          </Text>
-                          {destination.deliveredAt && (
+                          {destination?.recipient && (
+                            <Text
+                              style={[
+                                styles.locationLabel,
+                                { marginTop: 6, color: "#666" },
+                              ]}
+                            >
+                              {destination.recipient.name ?? "Unknown"} •{" "}
+                              {destination.recipient.phone ?? "Unknown"}
+                            </Text>
+                          )}
+                          {typeof destination?.distanceFromPickupKm ===
+                            "number" && (
+                            <Text
+                              style={[
+                                styles.locationLabel,
+                                { marginTop: 4, color: "#666" },
+                              ]}
+                            >
+                              {destination.distanceFromPickupKm.toFixed(2)} km
+                              from pickup • ₦
+                              {(destination.deliveryFee ?? 0).toLocaleString()}
+                            </Text>
+                          )}
+                          {destination?.deliveredAt && (
                             <Text
                               style={[
                                 styles.locationLabel,
@@ -355,7 +402,7 @@ export default function OrderDetailScreen() {
                           )}
                         </View>
                       </View>
-                      {index < order.deliveryDestinations.length - 1 && (
+                      {index < deliveryDestinations.length - 1 && (
                         <View style={styles.routeLine} />
                       )}
                     </React.Fragment>
@@ -369,7 +416,8 @@ export default function OrderDetailScreen() {
                   <View style={styles.locationDetails}>
                     <Text style={styles.locationLabel}>Drop-off Location</Text>
                     <Text style={styles.locationAddress}>
-                      {order.dropOffLocation.address}
+                      {order.dropOffLocation?.address ??
+                        "Drop-off address unavailable"}
                     </Text>
                   </View>
                 </View>
@@ -384,14 +432,14 @@ export default function OrderDetailScreen() {
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>Delivery Fee</Text>
               <Text style={styles.priceValue}>
-                ₦{order.deliveryFee.toLocaleString()}
+                ₦{safeNumber(order.deliveryFee).toLocaleString()}
               </Text>
             </View>
 
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>Service Charge</Text>
               <Text style={styles.priceValue}>
-                ₦{order.serviceChargeAmount.toLocaleString()}
+                ₦{safeNumber(order.serviceChargeAmount).toLocaleString()}
               </Text>
             </View>
 
@@ -400,7 +448,7 @@ export default function OrderDetailScreen() {
             <View style={styles.priceRow}>
               <Text style={styles.totalLabel}>Total Amount</Text>
               <Text style={styles.totalValue}>
-                ₦{order.totalAmount.toLocaleString()}
+                ₦{safeNumber(order.totalAmount).toLocaleString()}
               </Text>
             </View>
           </View>
@@ -417,48 +465,54 @@ export default function OrderDetailScreen() {
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Order Timeline</Text>
 
-            {order.orderTracking
+            {orderTracking.length === 0 && (
+              <Text style={styles.infoLabel}>No tracking events yet.</Text>
+            )}
+
+            {orderTracking
               .slice()
               .reverse()
-              .map((tracking, index) => (
-                <View key={tracking.id} style={styles.trackingItem}>
-                  <View style={styles.trackingIconContainer}>
-                    <View
-                      style={[
-                        styles.trackingDot,
-                        {
-                          backgroundColor: getStatusColor(tracking.status),
-                        },
-                      ]}
-                    />
-                    {index < order.orderTracking.length - 1 && (
-                      <View style={styles.trackingLine} />
-                    )}
-                  </View>
-                  <View style={styles.trackingContent}>
-                    <View style={styles.trackingHeader}>
-                      <Text style={styles.trackingStatus}>
-                        {formatStatus(tracking.status)}
-                      </Text>
-                      <Text style={styles.trackingTime}>
-                        {new Date(tracking.createdAt).toLocaleTimeString(
-                          "en-US",
-                          {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          },
-                        )}
+              .map((tracking, index, arr) => {
+                const isLast = index < arr.length - 1;
+                const statusColor = getStatusColor(tracking?.status);
+                return (
+                  <View key={tracking?.id ?? index} style={styles.trackingItem}>
+                    <View style={styles.trackingIconContainer}>
+                      <View
+                        style={[
+                          styles.trackingDot,
+                          { backgroundColor: statusColor },
+                        ]}
+                      />
+                      {isLast && <View style={styles.trackingLine} />}
+                    </View>
+                    <View style={styles.trackingContent}>
+                      <View style={styles.trackingHeader}>
+                        <Text style={styles.trackingStatus}>
+                          {formatStatus(tracking?.status)}
+                        </Text>
+                        <Text style={styles.trackingTime}>
+                          {tracking?.createdAt
+                            ? new Date(tracking.createdAt).toLocaleTimeString(
+                                "en-US",
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                },
+                              )
+                            : ""}
+                        </Text>
+                      </View>
+                      {tracking?.note && (
+                        <Text style={styles.trackingNote}>{tracking.note}</Text>
+                      )}
+                      <Text style={styles.trackingDate}>
+                        {formatDate(tracking?.createdAt)}
                       </Text>
                     </View>
-                    {tracking.note && (
-                      <Text style={styles.trackingNote}>{tracking.note}</Text>
-                    )}
-                    <Text style={styles.trackingDate}>
-                      {formatDate(tracking.createdAt)}
-                    </Text>
                   </View>
-                </View>
-              ))}
+                );
+              })}
           </View>
 
           {/* Rider Info */}
@@ -467,14 +521,6 @@ export default function OrderDetailScreen() {
               <View style={styles.riderHeader}>
                 <Ionicons name="bicycle" size={24} color={tzColors.primary} />
                 <Text style={styles.sectionTitle}>Rider Information</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Rider Assigned</Text>
-                <Text style={styles.infoValue}>
-                  {order.riderAssignedAt
-                    ? formatDate(order.riderAssignedAt)
-                    : "Yes"}
-                </Text>
               </View>
               {completed && (
                 <View style={styles.infoRow}>

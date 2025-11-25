@@ -5,7 +5,7 @@
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
-    "start:17": "npx expo run:ios --device \"FF5FFFC0-2675-4DBE-B1BC-5E19D2EADFDA\" --port 8083",
+    "start:17": "npx expo run:ios --device \"062C8C26-9A44-4F1A-A1E9-5C7DEBBF2DE6\" --port 8083",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "iphone16": "npx expo start --ios",
@@ -50,7 +50,7 @@
     "react-dom": "19.0.0",
     "react-native": "0.79.6",
     "react-native-gesture-handler": "~2.24.0",
-    "react-native-maps": "1.20.1",
+    "react-native-leaflet-view": "^1.1.2",
     "react-native-paystack-webview": "^5.0.1",
     "react-native-reanimated": "~3.17.4",
     "react-native-responsive-fontsize": "^0.5.1",

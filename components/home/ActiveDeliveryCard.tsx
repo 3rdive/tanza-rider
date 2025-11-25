@@ -11,12 +11,11 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { IActiveOrder, orderService } from "@/lib/api";
-
-type StatusDef = { label: string; color: string };
+import DeliveryProgress from "./DeliveryProgress";
+import { statuses } from "@/lib/constants";
 
 type Props = {
   status: string;
-  statuses: StatusDef[];
   onNextStatus: () => void;
   loading?: boolean;
   error?: boolean;
@@ -29,7 +28,6 @@ type Props = {
 
 export default function ActiveDeliveryCard({
   status,
-  statuses,
   onNextStatus,
   loading = false,
   error = false,
@@ -129,19 +127,6 @@ export default function ActiveDeliveryCard({
         useNativeDriver: true,
       }),
     ]).start();
-  };
-
-  const getColorForStatus = (label: string, index: number) => {
-    const currentIndex = statuses.findIndex((s) => s.label === status);
-    return index <= currentIndex ? statuses[index].color : "#ddd";
-  };
-
-  // Helper to format status labels for display
-  const formatStatusLabel = (statusLabel: string): string => {
-    return statusLabel
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
   };
 
   // Handler to mark a destination as delivered
@@ -665,42 +650,7 @@ export default function ActiveDeliveryCard({
 
             <View style={styles.dividerLine} />
 
-            {/* Status Flow Section */}
-            <View style={styles.sectionContainer}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="git-branch" size={20} color="#00AA66" />
-                <Text style={styles.sectionTitle}>Delivery Progress</Text>
-              </View>
-
-              <View style={styles.statusFlow}>
-                {statuses.map((s, i) => (
-                  <View key={s.label} style={styles.statusItem}>
-                    <View
-                      style={[
-                        styles.statusDot,
-                        { backgroundColor: getColorForStatus(s.label, i) },
-                      ]}
-                    />
-                    {i < statuses.length - 1 && (
-                      <View
-                        style={[
-                          styles.connector,
-                          { backgroundColor: getColorForStatus(s.label, i) },
-                        ]}
-                      />
-                    )}
-                    <Text
-                      style={[
-                        styles.statusLabel,
-                        { color: getColorForStatus(s.label, i) },
-                      ]}
-                    >
-                      {formatStatusLabel(s.label)}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
+            <DeliveryProgress currentStatus={status} />
 
             {/* Next step */}
             {status !== "delivered" && (
@@ -788,24 +738,6 @@ const styles = StyleSheet.create({
   infoBox: { alignItems: "center", flex: 1 },
   infoLabel: { fontSize: 12, color: "#777" },
   infoValue: { fontSize: 15, fontWeight: "600", color: "#222", marginTop: 2 },
-  statusFlow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 25,
-    position: "relative",
-  },
-  statusItem: { alignItems: "center", flex: 1, position: "relative" },
-  statusDot: { width: 14, height: 14, borderRadius: 7, zIndex: 2 },
-  connector: {
-    position: "absolute",
-    top: 6,
-    right: "-50%",
-    width: "100%",
-    height: 2,
-    zIndex: 1,
-  },
-  statusLabel: { fontSize: 10, marginTop: 6 },
   actionBtn: {
     backgroundColor: "#00AA66",
     borderRadius: 10,
