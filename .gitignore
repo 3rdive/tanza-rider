@@ -15,4 +15,6 @@ build/
 *.log
 .env
 .env.local
-google-service.json
+google-services.json
+/ios
+/android
