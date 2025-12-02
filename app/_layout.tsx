@@ -1,6 +1,7 @@
 import AuthStack from "@/app/auth-stacks";
 import GlobalAlert from "@/components/GlobalAlert";
 import { ReduxProvider } from "@/redux/redux-provider";
+import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 import {
   Poppins_400Regular,
   Poppins_500Medium,
@@ -63,8 +64,18 @@ export default function RootLayout() {
   }, [fontsLoaded]);
 
   return (
-    <ReduxProvider>
-      <StatusBar style="auto" />
+    <ThemeProvider>
+      <ReduxProvider>
+        <RootLayoutContent />
+      </ReduxProvider>
+    </ThemeProvider>
+  );
+}
+
+function RootLayoutContent() {
+  return (
+    <>
+      <StatusBar style="light" animated />
       <GlobalAlert />
       <AuthStack>
         <Stack
@@ -79,6 +90,6 @@ export default function RootLayout() {
           <Stack.Screen name="+not-found" />
         </Stack>
       </AuthStack>
-    </ReduxProvider>
+    </>
   );
 }

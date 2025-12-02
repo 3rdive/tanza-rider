@@ -39,15 +39,15 @@ AXIOS.interceptors.request.use(
       if (safeHeaders.Authorization)
         safeHeaders.Authorization = "***redacted***";
 
-      console.log("[Axios Request]", {
-        baseURL: config.baseURL,
-        method: config.method,
-        url: config.url,
-        params: config.params,
-        headers: safeHeaders,
-        data: config.data,
-        timeout: config.timeout,
-      });
+      // console.log("[Axios Request]", {
+      //   baseURL: config.baseURL,
+      //   method: config.method,
+      //   url: config.url,
+      //   params: config.params,
+      //   headers: safeHeaders,
+      //   data: config.data,
+      //   timeout: config.timeout,
+      // });
     }
     return config;
   },
@@ -71,15 +71,25 @@ AXIOS.interceptors.response.use(
         typeof rawHeaders?.toJSON === "function"
           ? rawHeaders.toJSON()
           : rawHeaders;
-      console.log("[Axios Response]", {
-        method: response.config?.method,
-        url: response.config?.url,
-        status: response.status,
-        statusText: response.statusText,
-        headers,
-        data: response.data,
-      });
+      // console.log("[Axios Response]", {
+      //   method: response.config?.method,
+      //   url: response.config?.url,
+      //   status: response.status,
+      //   statusText: response.statusText,
+      //   headers,
+      //   data: response.data,
+      // });
     }
+
+    // Normalize message field: if it's an array, join with commas
+    if (
+      response.data &&
+      typeof response.data.message === "object" &&
+      Array.isArray(response.data.message)
+    ) {
+      response.data.message = response.data.message.join(", ");
+    }
+
     return response;
   },
   (error) => {
@@ -164,6 +174,21 @@ export interface IResetPasswordPayload {
   password: string;
   reference: string;
   code: string;
+}
+
+export interface ITicket {
+  id: string;
+  userId: string;
+  title: string;
+  description: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ICreateTicketPayload {
+  title: string;
+  description: string;
 }
 
 export const authService = {
@@ -412,6 +437,23 @@ export const transactionService = {
   getById: async (id: string) => {
     const { data } = await AXIOS.get<IApiResponse<ITransactionDetail | null>>(
       `/api/v1/transaction/${id}`
+    );
+    return data;
+  },
+} as const;
+
+// Support/Tickets
+export const ticketService = {
+  createTicket: async (payload: ICreateTicketPayload) => {
+    const { data } = await AXIOS.post<IApiResponse<ITicket>>(
+      "/api/v1/tickets/",
+      payload
+    );
+    return data;
+  },
+  getUserTickets: async () => {
+    const { data } = await AXIOS.get<IApiResponse<ITicket[]>>(
+      "/api/v1/tickets/user-tickets"
     );
     return data;
   },
@@ -762,16 +804,98 @@ export interface ILocationFeature {
   geometry: ILocationFeatureGeometry;
 }
 
+/**
+ * API response shape for the new location search endpoint.
+ * Example items include fields like: name, description, country, state, city,
+ * postcode, latitude, longitude, countrycode, street
+ */
+export interface ILocationSearchApiItem {
+  name: string;
+  description?: string;
+  country?: string;
+  state?: string;
+  city?: string;
+  postcode?: string;
+  latitude?: number;
+  longitude?: number;
+  countrycode?: string;
+  countryCode?: string;
+  street?: string;
+  houseNumber?: string;
+}
+
+/**
+ * API response shape for reverse geocode endpoint
+ */
+export interface IReverseGeocodeData {
+  displayName?: string;
+  country?: string;
+  state?: string;
+  city?: string;
+  postcode?: string;
+  countryCode?: string;
+  houseNumber?: string;
+  [key: string]: any;
+}
+
+/**
+ * locationService
+ *
+ * NOTE:
+ * The backend changed the location endpoints to return a simplified shape
+ * (flat objects with latitude/longitude) rather than GeoJSON-like features.
+ * To avoid changing all callers in the app, we keep the existing `ILocationFeature`
+ * shape consumers expect and map the new API response into that shape here.
+ */
 export const locationService = {
   search: async (q: string) => {
-    const { data } = await AXIOS.get<IApiResponse<ILocationFeature[]>>(
-      "/api/v1/location/search",
-      { params: { q } }
-    );
-    return data;
+    // Fetch the new API shape
+    const { data: apiData } = await AXIOS.get<
+      IApiResponse<ILocationSearchApiItem[]>
+    >("/api/v1/location/search", { params: { q } });
+
+    // Normalize into existing ILocationFeature[] shape so callers don't need changes
+    const rawItems = (apiData?.data || []) as ILocationSearchApiItem[];
+    const mapped = rawItems.map((item, idx) => {
+      const lat = (item.latitude ?? (item as any).lat) as number | undefined;
+      const lon = (item.longitude ?? (item as any).lon) as number | undefined;
+
+      const properties: ILocationFeatureProperties = {
+        osm_type: "",
+        osm_id: typeof idx === "number" ? idx : 0,
+        name: item.name || item.description || "",
+        country: item.country,
+        state: item.state,
+        city: item.city,
+        street: item.street,
+        postcode: item.postcode,
+        countrycode:
+          (item.countrycode || item.countryCode || "")?.toString() || undefined,
+        housenumber: item.houseNumber,
+      };
+
+      const geometry: ILocationFeatureGeometry = {
+        type: "Point",
+        coordinates: [lon ?? 0, lat ?? 0],
+      };
+
+      return {
+        type: "Feature",
+        properties,
+        geometry,
+      } as ILocationFeature;
+    });
+
+    // Return the normalized result but preserve the original envelope fields
+    return {
+      ...(apiData as any),
+      data: mapped,
+    } as IApiResponse<ILocationFeature[]>;
   },
   reverse: async (lat: number, lon: number) => {
-    const { data } = await AXIOS.get<IApiResponse<any>>(
+    // The reverse endpoint now returns a flat object with fields such as:
+    // displayName, country, state, city, postcode, countryCode, houseNumber
+    const { data } = await AXIOS.get<IApiResponse<IReverseGeocodeData>>(
       "/api/v1/location/reverse",
       { params: { lat, lon } }
     );
@@ -966,6 +1090,7 @@ export interface IAddWithdrawalOptionPayload {
   accountNumber: string;
   bankHoldersName: string;
   slug: string;
+  bankCode: string;
 }
 
 export interface IBank {

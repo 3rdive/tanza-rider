@@ -1,5 +1,26 @@
-
-
 export const tzColors = {
- primary: '#00B624',
-}
+  light: {
+    primary: "#00B624",
+    success: "#00B624",
+    error: "#d9534f",
+    background: "#f8f8f8",
+    surface: "#ffffff",
+    text: "#222222",
+    textSecondary: "#666666",
+    border: "#e0e0e0",
+    tabBackground: "#E6F5EF",
+    roleBadgeBackground: "#E6F5EF",
+  },
+  dark: {
+    primary: "#00B624",
+    success: "#00B624",
+    error: "#d9534f",
+    background: "#121212",
+    surface: "#1e1e1e",
+    text: "#ffffff",
+    textSecondary: "#cccccc",
+    border: "#333333",
+    tabBackground: "#2a2a2a",
+    roleBadgeBackground: "#1a4d3a",
+  },
+};

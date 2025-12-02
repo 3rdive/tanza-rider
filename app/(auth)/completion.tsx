@@ -2,10 +2,12 @@
 import { authService, storageService } from "@/lib/api";
 import { rs, showAlert, showPermissionAlert } from "@/lib/functions";
 import { useAuthFlow, useUser } from "@/redux/hooks/hooks";
+import { useTheme } from "@/context/ThemeContext";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
+import Constants from "expo-constants";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -27,6 +29,7 @@ export default function CompleteInfoScreen() {
   const { setUser } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const { colors } = useTheme();
 
   const hasTwoWords = (s: string) => s.trim().split(/\s+/).length >= 2;
 
@@ -66,7 +69,7 @@ export default function CompleteInfoScreen() {
           "Sign up failed",
           Array.isArray(resp.message)
             ? resp.message[0]
-            : resp.message || "Please try again"
+            : resp.message || "Please try again",
         );
       }
     } catch (e: any) {
@@ -85,6 +88,199 @@ export default function CompleteInfoScreen() {
       router.replace("/(auth)/mobile-entry");
     }
   }, [mobile, otp]);
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.surface,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: 24,
+      paddingTop: 20,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      justifyContent: "center",
+      marginBottom: 20,
+    },
+    backArrow: {
+      fontSize: rs(24),
+      color: colors.text,
+    },
+    title: {
+      fontSize: rs(28),
+      fontWeight: "bold",
+      color: colors.text,
+      marginBottom: 8,
+    },
+    subtitle: {
+      fontSize: rs(16),
+      color: colors.textSecondary,
+      marginBottom: 40,
+      lineHeight: 22,
+    },
+    inputContainer: {
+      marginBottom: 24,
+    },
+    label: {
+      fontSize: rs(16),
+      color: colors.text,
+      marginBottom: 8,
+      fontWeight: "500",
+    },
+    input: {
+      color: colors.text,
+      borderWidth: rs(2),
+      borderColor: colors.border,
+      borderRadius: rs(12),
+      paddingHorizontal: rs(16),
+      paddingVertical: rs(16),
+      fontSize: rs(16),
+      backgroundColor: colors.surface,
+    },
+    errorInput: {
+      borderColor: "#ff4444",
+    },
+    helperText: {
+      fontSize: rs(14),
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+    errorText: {
+      fontSize: rs(14),
+      color: "#ff4444",
+      marginTop: 4,
+    },
+    emailDisplay: {
+      backgroundColor: colors.background,
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 40,
+    },
+    emailLabel: {
+      fontSize: rs(14),
+      color: colors.textSecondary,
+      marginBottom: 4,
+    },
+    emailText: {
+      fontSize: rs(16),
+      color: colors.text,
+      fontWeight: "500",
+    },
+    completeButton: {
+      backgroundColor: colors.text,
+      paddingVertical: 16,
+      borderRadius: 12,
+      alignItems: "center",
+      marginBottom: 40,
+    },
+    disabledButton: {
+      backgroundColor: colors.border,
+    },
+    completeText: {
+      color: colors.surface,
+      fontSize: rs(18),
+      fontWeight: "600",
+    },
+    disabledText: {
+      color: colors.textSecondary,
+    },
+    useLocationBtn: {
+      marginTop: 8,
+      alignSelf: "flex-start",
+      backgroundColor: colors.tabBackground,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    useLocationBtnText: {
+      color: colors.primary,
+      fontWeight: "600",
+    },
+    suggestionBox: {
+      marginTop: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      backgroundColor: colors.surface,
+      overflow: "hidden",
+    },
+    suggestionItem: {
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    suggestionTitle: {
+      fontSize: rs(15),
+      color: colors.text,
+      fontWeight: "600",
+    },
+    suggestionSubtitle: {
+      fontSize: rs(13),
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    avatarRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
+    },
+    avatarWrapper: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.background,
+    },
+    avatar: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+    },
+    avatarPlaceholder: {
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    avatarPlaceholderText: {
+      color: colors.textSecondary,
+      fontSize: rs(20),
+      fontWeight: "700",
+    },
+    selectPhotoBtn: {
+      backgroundColor: colors.text,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 10,
+    },
+    selectPhotoBtnText: {
+      color: colors.surface,
+      fontWeight: "600",
+    },
+    inputWrapper: {
+      position: "relative",
+    },
+    clearBtn: {
+      position: "absolute",
+      right: 12,
+      top: 0,
+      bottom: 0,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 6,
+    },
+    clearBtnText: {
+      fontSize: rs(18),
+      color: colors.textSecondary,
+      fontWeight: "600",
+    },
+  });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -131,51 +327,164 @@ export default function CompleteInfoScreen() {
               style={styles.selectPhotoBtn}
               disabled={isUploading}
               onPress={async () => {
+                // Defensive handler: break complex steps into guarded stages so failures don't crash the app.
+                // Also ensure setIsUploading is always reset in finally.
+
+                // Quick sanity: ensure ImagePicker API exists
+                if (!ImagePicker || !ImagePicker.launchImageLibraryAsync) {
+                  showAlert(
+                    "Not Available",
+                    "Image picker is not available on this platform.",
+                  );
+                  return;
+                }
+
+                // Guard for Expo Go on iOS: Expo Go's binary does not include app-specific Info.plist keys,
+                // so attempting to request photo permissions will crash the app. In that environment,
+                // instruct the developer to use a dev client / standalone build.
                 try {
-                  const perm =
-                    await ImagePicker.requestMediaLibraryPermissionsAsync();
-                  if (perm.status !== "granted") {
-                    showPermissionAlert(
-                      "Permission needed",
-                      "We need access to your photos to select a profile picture.",
-                      "photos"
+                  if (
+                    Constants?.appOwnership === "expo" &&
+                    Platform.OS === "ios"
+                  ) {
+                    showAlert(
+                      "Not supported in Expo Go (iOS)",
+                      "The iOS Expo Go client does not include your app's photo permission strings and will crash when the app attempts to access the photo library. To test image selection on iOS please run a local development build or install a custom dev client / standalone build that includes your app's Info.plist entries.",
                     );
                     return;
                   }
-                  const result = await ImagePicker.launchImageLibraryAsync({
-                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                    allowsEditing: true,
-                    aspect: [1, 1],
-                    quality: 0.8,
-                  });
-                  if (result.canceled) return;
-                  const uri = result.assets?.[0]?.uri;
-                  if (!uri) return;
-                  // Optimistic: show a local image while uploading
-                  // We'll upload and replace with the server URL when done
-                  const timer = setTimeout(() => { }, 400);
-                  setIsUploading(true);
-                  const resp = await storageService.upload({
-                    uri,
-                    type: "image/jpeg",
-                  });
-                  clearTimeout(timer);
-                  if (resp?.success) {
-                    const url = (resp.data as any)?.url;
-                    if (url) setProfilePic(url);
-                  } else {
+                } catch (constErr) {
+                  // If Constants isn't available for some reason, just continue with permission checks
+                  console.warn("Constants check failed:", constErr);
+                }
+
+                // Start upload state early to reflect UI - will be cleared in finally
+                setIsUploading(true);
+
+                try {
+                  // Permission checks (skip on web)
+                  if (Platform.OS !== "web") {
+                    try {
+                      const current =
+                        await ImagePicker.getMediaLibraryPermissionsAsync();
+                      const currentGranted =
+                        typeof (current as any)?.granted === "boolean"
+                          ? (current as any).granted
+                          : (current as any)?.status === "granted";
+
+                      if (!currentGranted) {
+                        const request =
+                          await ImagePicker.requestMediaLibraryPermissionsAsync();
+                        const granted =
+                          typeof (request as any)?.granted === "boolean"
+                            ? (request as any).granted
+                            : (request as any)?.status === "granted";
+
+                        if (!granted) {
+                          // Ask user to open settings
+                          showPermissionAlert(
+                            "Permission needed",
+                            "We need access to your photos to select a profile picture.",
+                            "photos",
+                          );
+                          return;
+                        }
+                      }
+                    } catch (permErr) {
+                      // If permission API throws, log and show a friendly message
+                      console.warn("Media permission check failed:", permErr);
+                      showPermissionAlert(
+                        "Permission needed",
+                        "We need access to your photos to select a profile picture.",
+                        "photos",
+                      );
+                      return;
+                    }
+                  }
+
+                  // Launch picker in its own try/catch so errors here are isolated
+                  let result: any = null;
+                  try {
+                    result = await ImagePicker.launchImageLibraryAsync({
+                      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                      allowsEditing: true,
+                      aspect: [1, 1],
+                      quality: 0.8,
+                    });
+                  } catch (launchErr) {
+                    console.warn("Failed to open image picker:", launchErr);
+                    showAlert(
+                      "Error",
+                      "Unable to open image picker. Please try again.",
+                    );
+                    return;
+                  }
+
+                  // Support both `canceled` and older `cancelled` flags
+                  const wasCancelled =
+                    (result as any).canceled ??
+                    (result as any).cancelled ??
+                    false;
+                  if (wasCancelled) return;
+
+                  // Support both new assets array and older uri field
+                  const uri =
+                    (result as any).assets?.[0]?.uri ?? (result as any).uri;
+                  if (!uri) {
+                    // Nothing to upload
+                    return;
+                  }
+
+                  // Upload step - ensure we catch upload errors explicitly
+                  const timer = setTimeout(() => {}, 400);
+                  try {
+                    const resp = await storageService.upload({
+                      uri,
+                      type: "image/jpeg",
+                    });
+                    clearTimeout(timer);
+
+                    if (resp?.success) {
+                      const url = (resp.data as any)?.url;
+                      if (url) {
+                        setProfilePic(url);
+                      } else {
+                        // success true but no url - inform user
+                        showAlert(
+                          "Upload Error",
+                          "Upload succeeded but no image URL was returned.",
+                        );
+                      }
+                    } else {
+                      showAlert(
+                        "Upload Error",
+                        resp?.message || "Unable to upload image",
+                        [{ text: "Cancel", style: "cancel" }],
+                      );
+                    }
+                  } catch (uploadErr: any) {
+                    clearTimeout(timer);
+                    console.error("Image upload failed:", uploadErr);
                     showAlert(
                       "Upload Error",
-                      resp?.message || "Unable to upload image",
-                      [{ text: "Cancel", style: "cancel" }]
+                      uploadErr?.response?.data?.message ||
+                        uploadErr?.message ||
+                        "Unable to upload image",
                     );
+                  } finally {
+                    // Clear any leftover timer
+                    try {
+                      clearTimeout(timer);
+                    } catch {}
                   }
                 } catch (e: any) {
+                  // Top-level catch as an extra safety net
+                  console.error("Unexpected error during image selection:", e);
                   showAlert(
                     "Upload Error",
                     e?.response?.data?.message ||
-                    e?.message ||
-                    "Unable to upload image"
+                      e?.message ||
+                      "Unable to upload image",
                   );
                 } finally {
                   setIsUploading(false);
@@ -248,196 +557,3 @@ export default function CompleteInfoScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    marginBottom: 20,
-  },
-  backArrow: {
-    fontSize: rs(24),
-    color: "#000",
-  },
-  title: {
-    fontSize: rs(28),
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: rs(16),
-    color: "#666",
-    marginBottom: 40,
-    lineHeight: 22,
-  },
-  inputContainer: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: rs(16),
-    color: "#000",
-    marginBottom: 8,
-    fontWeight: "500",
-  },
-  input: {
-    color: "black",
-    borderWidth: rs(2),
-    borderColor: "#e0e0e0",
-    borderRadius: rs(12),
-    paddingHorizontal: rs(16),
-    paddingVertical: rs(16),
-    fontSize: rs(16),
-    backgroundColor: "#fff",
-  },
-  errorInput: {
-    borderColor: "#ff4444",
-  },
-  helperText: {
-    fontSize: rs(14),
-    color: "#666",
-    marginTop: 4,
-  },
-  errorText: {
-    fontSize: rs(14),
-    color: "#ff4444",
-    marginTop: 4,
-  },
-  emailDisplay: {
-    backgroundColor: "#f5f5f5",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 40,
-  },
-  emailLabel: {
-    fontSize: rs(14),
-    color: "#666",
-    marginBottom: 4,
-  },
-  emailText: {
-    fontSize: rs(16),
-    color: "#000",
-    fontWeight: "500",
-  },
-  completeButton: {
-    backgroundColor: "#000",
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginBottom: 40,
-  },
-  disabledButton: {
-    backgroundColor: "#ccc",
-  },
-  completeText: {
-    color: "#fff",
-    fontSize: rs(18),
-    fontWeight: "600",
-  },
-  disabledText: {
-    color: "#999",
-  },
-  useLocationBtn: {
-    marginTop: 8,
-    alignSelf: "flex-start",
-    backgroundColor: "#f0f9f1",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: "#d6f5db",
-  },
-  useLocationBtnText: {
-    color: "#00B624",
-    fontWeight: "600",
-  },
-  suggestionBox: {
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    borderRadius: 8,
-    backgroundColor: "#fff",
-    overflow: "hidden",
-  },
-  suggestionItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  suggestionTitle: {
-    fontSize: rs(15),
-    color: "#000",
-    fontWeight: "600",
-  },
-  suggestionSubtitle: {
-    fontSize: rs(13),
-    color: "#666",
-    marginTop: 2,
-  },
-  avatarRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  avatarWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    backgroundColor: "#f2f2f2",
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  avatarPlaceholder: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  avatarPlaceholderText: {
-    color: "#666",
-    fontSize: rs(20),
-    fontWeight: "700",
-  },
-  selectPhotoBtn: {
-    backgroundColor: "#000",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  selectPhotoBtnText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  inputWrapper: {
-    position: "relative",
-  },
-  clearBtn: {
-    position: "absolute",
-    right: 12,
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 6,
-  },
-  clearBtnText: {
-    fontSize: rs(18),
-    color: "#999",
-    fontWeight: "600",
-  },
-});

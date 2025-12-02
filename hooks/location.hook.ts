@@ -1,14 +1,12 @@
 import * as Location from "expo-location";
 import { useEffect, useState } from "react";
 import { Alert } from "react-native";
-import { locationService } from "@/lib/api";
 
 export const useDeviceLocation = () => {
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [longitude, setLongitude] = useState<number | null>(null);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-
 
   const getUserLocation = async (showMessage: boolean = false) => {
     try {
@@ -24,7 +22,8 @@ export const useDeviceLocation = () => {
               {
                 text: "Access Location",
                 onPress: async () => {
-                  const again = await Location.requestForegroundPermissionsAsync();
+                  const again =
+                    await Location.requestForegroundPermissionsAsync();
                   if (again.status === "granted") {
                     await getUserLocation(false);
                   } else {
@@ -33,13 +32,15 @@ export const useDeviceLocation = () => {
                 },
               },
               { text: "No", onPress: () => {} },
-            ]
+            ],
           );
         }
         return;
       }
 
-      const { coords } = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const { coords } = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
       if (coords) {
         const { latitude: lat, longitude: lon } = coords;
         setLatitude(lat);

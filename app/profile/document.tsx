@@ -19,6 +19,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { storageService } from "@/lib/api";
 import { useRider } from "@/hooks/rider.hook";
 import type { IRequiredDocument, IDocumentUpload } from "@/lib/api";
+import { useTheme } from "@/context/ThemeContext";
 import { router } from "expo-router";
 
 interface DocumentData {
@@ -32,6 +33,7 @@ interface DocumentData {
 }
 
 export default function DocumentVerification() {
+  const { colors } = useTheme();
   const {
     rider,
     documentStatus,
@@ -99,7 +101,7 @@ export default function DocumentVerification() {
       requiredDocs.forEach((reqDoc) => {
         // Find if this document already exists in rider's documents
         const existingDoc = existingDocuments?.find(
-          (d) => d.docName === reqDoc.docName
+          (d) => d.docName === reqDoc.docName,
         );
 
         newDocData[reqDoc.docName] = {
@@ -131,40 +133,49 @@ export default function DocumentVerification() {
     if (!isEditable) {
       Alert.alert(
         "Not Editable",
-        "Documents cannot be modified when status is not INITIAL or REJECTED."
+        "Documents cannot be modified when status is not INITIAL or REJECTED.",
       );
       return;
     }
 
     try {
-      // Check current permission status
-      const permissionStatus =
-        await ImagePicker.getMediaLibraryPermissionsAsync();
+      // On web, permissions are not required the same way; skip checks there
+      if (Platform.OS !== "web") {
+        // Check current permission status first to avoid unnecessary prompts
+        const currentPerm = await ImagePicker.getMediaLibraryPermissionsAsync();
+        const currentGranted =
+          typeof (currentPerm as any)?.granted === "boolean"
+            ? (currentPerm as any).granted
+            : (currentPerm as any)?.status === "granted";
 
-      // If not granted, request permission
-      if (!permissionStatus.granted) {
-        const { status } =
-          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!currentGranted) {
+          // Request permission
+          const req = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          const granted =
+            typeof (req as any)?.granted === "boolean"
+              ? (req as any).granted
+              : (req as any)?.status === "granted";
 
-        if (status !== "granted") {
-          Alert.alert(
-            "Permission Required",
-            "Please grant access to your photo library in your device settings to upload documents. Go to Settings > Tanza Go > Photos and enable access.",
-            [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Open Settings",
-                onPress: () => {
-                  if (Platform.OS === "ios") {
-                    Linking.openURL("app-settings:");
-                  } else {
-                    Linking.openSettings();
-                  }
+          if (!granted) {
+            Alert.alert(
+              "Permission Required",
+              "Please grant access to your photo library in your device settings to upload documents. Go to Settings > Tanza Go > Photos and enable access.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Open Settings",
+                  onPress: () => {
+                    if (Platform.OS === "ios") {
+                      Linking.openURL("app-settings:");
+                    } else {
+                      Linking.openSettings();
+                    }
+                  },
                 },
-              },
-            ]
-          );
-          return;
+              ],
+            );
+            return;
+          }
         }
       }
 
@@ -173,39 +184,45 @@ export default function DocumentVerification() {
         quality: 0.7,
       });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const uri = result.assets[0].uri;
-        // Upload to server
-        setUploading(true);
-        try {
-          const uploadRes = await storageService.upload({
-            uri,
-            name: `${docName}-${Date.now()}.jpg`,
-            type: "image/jpeg",
-          });
-          const uploadedUrl = uploadRes.data.url;
+      // Support both new and old result shapes and cancellation flags
+      const wasCancelled =
+        (result as any).canceled ?? (result as any).cancelled ?? false;
+      if (wasCancelled) return;
 
-          // Update document data - preserve all existing fields
-          setDocumentData((prev) => {
-            const existing = prev[docName];
-            if (!existing) return prev;
+      const uri = (result as any).assets?.[0]?.uri ?? (result as any).uri;
+      if (!uri) return;
 
-            return {
-              ...prev,
-              [docName]: {
-                ...existing,
-                docUrl: uploadedUrl,
-              },
-            };
-          });
+      // Upload to server
+      setUploading(true);
+      try {
+        const uploadRes = await storageService.upload({
+          uri,
+          name: `${docName}-${Date.now()}.jpg`,
+          type: "image/jpeg",
+        });
+        const uploadedUrl =
+          uploadRes.data?.url ?? (uploadRes as any)?.data?.url;
 
-          Alert.alert("Uploaded", `${docName} uploaded successfully.`);
-        } catch (err) {
-          console.error("Upload error:", err);
-          Alert.alert("Upload Failed", "Could not upload the image.");
-        } finally {
-          setUploading(false);
-        }
+        // Update document data - preserve all existing fields
+        setDocumentData((prev) => {
+          const existing = prev[docName];
+          if (!existing) return prev;
+
+          return {
+            ...prev,
+            [docName]: {
+              ...existing,
+              docUrl: uploadedUrl,
+            },
+          };
+        });
+
+        Alert.alert("Uploaded", `${docName} uploaded successfully.`);
+      } catch (err) {
+        console.error("Upload error:", err);
+        Alert.alert("Upload Failed", "Could not upload the image.");
+      } finally {
+        setUploading(false);
       }
     } catch (err) {
       console.warn(err);
@@ -217,74 +234,91 @@ export default function DocumentVerification() {
     if (!isEditable) {
       Alert.alert(
         "Not Editable",
-        "Documents cannot be modified when status is not INITIAL or REJECTED."
+        "Documents cannot be modified when status is not INITIAL or REJECTED.",
       );
       return;
     }
 
     try {
-      // Check current permission status
-      const permissionStatus = await ImagePicker.getCameraPermissionsAsync();
+      // On web, camera access typically doesn't follow the same permission API; skip checks there
+      if (Platform.OS !== "web") {
+        // Check camera permission first
+        const currentPerm = await ImagePicker.getCameraPermissionsAsync();
+        const currentGranted =
+          typeof (currentPerm as any)?.granted === "boolean"
+            ? (currentPerm as any).granted
+            : (currentPerm as any)?.status === "granted";
 
-      // If not granted, request permission
-      if (!permissionStatus.granted) {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (!currentGranted) {
+          const req = await ImagePicker.requestCameraPermissionsAsync();
+          const granted =
+            typeof (req as any)?.granted === "boolean"
+              ? (req as any).granted
+              : (req as any)?.status === "granted";
 
-        if (status !== "granted") {
-          Alert.alert(
-            "Permission Required",
-            "Please grant camera access in your device settings to take photos of your documents. Go to Settings > Tanza Go > Camera and enable access.",
-            [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Open Settings",
-                onPress: () => {
-                  if (Platform.OS === "ios") {
-                    Linking.openURL("app-settings:");
-                  } else {
-                    Linking.openSettings();
-                  }
+          if (!granted) {
+            Alert.alert(
+              "Permission Required",
+              "Please grant camera access in your device settings to take photos of your documents. Go to Settings > Tanza Go > Camera and enable access.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Open Settings",
+                  onPress: () => {
+                    if (Platform.OS === "ios") {
+                      Linking.openURL("app-settings:");
+                    } else {
+                      Linking.openSettings();
+                    }
+                  },
                 },
-              },
-            ]
-          );
-          return;
+              ],
+            );
+            return;
+          }
         }
       }
 
       const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const uri = result.assets[0].uri;
-        setUploading(true);
-        try {
-          const uploadRes = await storageService.upload({
-            uri,
-            name: `${docName}-${Date.now()}.jpg`,
-            type: "image/jpeg",
-          });
-          const uploadedUrl = uploadRes.data.url;
 
-          // Update document data - preserve all existing fields
-          setDocumentData((prev) => {
-            const existing = prev[docName];
-            if (!existing) return prev;
+      // Support both new and old result shapes and cancellation flags
+      const wasCancelled =
+        (result as any).canceled ?? (result as any).cancelled ?? false;
+      if (wasCancelled) return;
 
-            return {
-              ...prev,
-              [docName]: {
-                ...existing,
-                docUrl: uploadedUrl,
-              },
-            };
-          });
+      const uri = (result as any).assets?.[0]?.uri ?? (result as any).uri;
+      if (!uri) return;
 
-          Alert.alert("Uploaded", `${docName} uploaded successfully.`);
-        } catch (err) {
-          console.error("Upload error:", err);
-          Alert.alert("Upload Failed", "Could not upload the image.");
-        } finally {
-          setUploading(false);
-        }
+      setUploading(true);
+      try {
+        const uploadRes = await storageService.upload({
+          uri,
+          name: `${docName}-${Date.now()}.jpg`,
+          type: "image/jpeg",
+        });
+        const uploadedUrl =
+          uploadRes.data?.url ?? (uploadRes as any)?.data?.url;
+
+        // Update document data - preserve all existing fields
+        setDocumentData((prev) => {
+          const existing = prev[docName];
+          if (!existing) return prev;
+
+          return {
+            ...prev,
+            [docName]: {
+              ...existing,
+              docUrl: uploadedUrl,
+            },
+          };
+        });
+
+        Alert.alert("Uploaded", `${docName} uploaded successfully.`);
+      } catch (err) {
+        console.error("Upload error:", err);
+        Alert.alert("Upload Failed", "Could not upload the image.");
+      } finally {
+        setUploading(false);
       }
     } catch (err) {
       console.warn(err);
@@ -297,7 +331,7 @@ export default function DocumentVerification() {
     if (documentStatus !== "INITIAL" && documentStatus !== "") {
       Alert.alert(
         "Not Allowed",
-        "Vehicle type can only be changed when documents have not been submitted yet."
+        "Vehicle type can only be changed when documents have not been submitted yet.",
       );
       return;
     }
@@ -341,7 +375,7 @@ export default function DocumentVerification() {
   const handleDateChange = (
     docName: string,
     event: any,
-    selectedDate?: Date
+    selectedDate?: Date,
   ) => {
     if (Platform.OS === "android") {
       setShowDatePicker(null);
@@ -380,6 +414,257 @@ export default function DocumentVerification() {
     setTempDate(initialDate);
     setShowDatePicker(docName);
   };
+
+  const handleSubmitDocuments = async () => {
+    if (!isEditable) {
+      Alert.alert("Not Editable", "Documents have already been submitted.");
+      return;
+    }
+
+    // Validate all required documents are uploaded
+    const missingDocs = requiredDocs.filter((reqDoc) => {
+      const docData = documentData[reqDoc.docName];
+      return !docData?.docUrl;
+    });
+
+    if (missingDocs.length > 0) {
+      Alert.alert(
+        "Missing Documents",
+        `Please upload: ${missingDocs.map((d) => d.docName).join(", ")}`,
+      );
+      return;
+    }
+
+    // Validate expiration dates for documents that require them
+    const invalidExpirations = requiredDocs.filter((reqDoc) => {
+      const docData = documentData[reqDoc.docName];
+      return reqDoc.requiresExpiration && !docData?.expirationDate;
+    });
+
+    if (invalidExpirations.length > 0) {
+      Alert.alert(
+        "Missing Expiration Dates",
+        `Please provide expiration dates for: ${invalidExpirations
+          .map((d) => d.docName)
+          .join(", ")}`,
+      );
+      return;
+    }
+
+    try {
+      // Build documents array
+      const documentsToUpload: IDocumentUpload[] = Object.values(
+        documentData,
+      ).map((doc) => ({
+        docName: doc.docName,
+        docUrl: doc.docUrl,
+        expirationDate: doc.expirationDate,
+      }));
+
+      // First, upload the documents
+      await uploadDocuments(documentsToUpload);
+
+      // Then, update the rider status to PENDING
+      await updateRider({ documentStatus: "PENDING" }).unwrap();
+
+      Alert.alert("Success", "Your documents have been submitted for review.");
+      // Optionally navigate back
+      // (navigation as any).goBack();
+      router.back();
+    } catch (err: any) {
+      console.error("Submit error:", err);
+      Alert.alert(
+        "Submission Failed",
+        err?.response?.data?.message ||
+          err?.message ||
+          "Could not submit documents.",
+      );
+    }
+  };
+
+  const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.surface },
+    title: { fontSize: 18, fontWeight: "700", padding: 16, color: colors.text },
+    statusBox: {
+      padding: 16,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: colors.border,
+    },
+    statusLabel: { color: colors.textSecondary, marginBottom: 8 },
+    statusRow: { flexDirection: "row", alignItems: "center" },
+    statusPill: {
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 16,
+      color: "#fff",
+      fontWeight: "600",
+    },
+    miniStatusPill: {
+      paddingVertical: 2,
+      paddingHorizontal: 6,
+      borderRadius: 10,
+    },
+    miniStatusText: {
+      color: "#fff",
+      fontSize: 10,
+      fontWeight: "700",
+    },
+    approved: { backgroundColor: "#00AA66" },
+    pending: { backgroundColor: "#ff9800" },
+    rejected: { backgroundColor: "#d32f2f" },
+    note: { marginTop: 10, color: colors.textSecondary },
+
+    section: { padding: 16 },
+    label: { color: colors.text, marginBottom: 8, fontWeight: "600" },
+    dropdownRow: { flexDirection: "row", gap: 8 },
+    typeBtn: {
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: 8,
+      backgroundColor: colors.background,
+    },
+    typeBtnActive: { backgroundColor: colors.primary },
+    typeText: { color: colors.text },
+    typeTextActive: { color: colors.surface, fontWeight: "700" },
+
+    docRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12,
+    },
+    docLabel: { fontWeight: "600", color: colors.text },
+    docSub: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
+    rejectionText: {
+      color: "#d32f2f",
+      fontSize: 11,
+      marginTop: 4,
+      fontStyle: "italic",
+    },
+    expirationLabel: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      marginBottom: 4,
+      fontWeight: "500",
+    },
+    expirationInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      fontSize: 14,
+      color: colors.text,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: colors.surface,
+    },
+    datePickerText: {
+      fontSize: 14,
+      color: colors.text,
+    },
+    datePickerModalBg: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "flex-end",
+    },
+    datePickerContainer: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 12,
+      borderTopRightRadius: 12,
+      paddingBottom: 20,
+    },
+    datePickerHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    datePickerCancel: {
+      fontSize: 16,
+      color: colors.textSecondary,
+    },
+    datePickerDone: {
+      fontSize: 16,
+      color: colors.primary,
+      fontWeight: "600",
+    },
+    iconBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 8,
+      backgroundColor: colors.background,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 8,
+    },
+    secondaryBtn: {
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      backgroundColor: colors.background,
+      borderRadius: 8,
+      marginRight: 6,
+    },
+    secondaryText: { color: colors.text },
+
+    primaryBtn: {
+      backgroundColor: colors.primary,
+      paddingVertical: 12,
+      borderRadius: 10,
+      alignItems: "center",
+    },
+    primaryText: { color: colors.surface, fontWeight: "700" },
+
+    modalBg: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.6)",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    modalContent: {
+      width: "92%",
+      height: "78%",
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 12,
+    },
+    closeBtn: { position: "absolute", top: 12, right: 12, zIndex: 10 },
+    previewImage: { width: "100%", height: "100%" },
+    warningRow: {
+      marginTop: 12,
+      backgroundColor: colors.tabBackground,
+      borderRadius: 8,
+      padding: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    warningIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: "#ff9800",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    warningText: {
+      flex: 1,
+      color: "#a94400",
+      fontWeight: "900",
+      textTransform: "uppercase",
+      fontSize: 12,
+    },
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+    },
+    backBtn: { padding: 6, marginRight: 8 },
+  });
 
   const renderDocRow = (docData: DocumentData) => {
     const {
@@ -427,7 +712,7 @@ export default function DocumentVerification() {
               <TouchableOpacity
                 style={[
                   styles.expirationInput,
-                  !isEditable && { backgroundColor: "#f5f5f5" },
+                  !isEditable && { backgroundColor: colors.background },
                 ]}
                 onPress={() => openDatePicker(docName, docData.expirationDate)}
                 disabled={!isEditable}
@@ -435,12 +720,16 @@ export default function DocumentVerification() {
                 <Text
                   style={[
                     styles.datePickerText,
-                    !docData.expirationDate && { color: "#999" },
+                    !docData.expirationDate && { color: colors.textSecondary },
                   ]}
                 >
                   {docData.expirationDate || "YYYY-MM-DD"}
                 </Text>
-                <Ionicons name="calendar-outline" size={20} color="#666" />
+                <Ionicons
+                  name="calendar-outline"
+                  size={20}
+                  color={colors.textSecondary}
+                />
               </TouchableOpacity>
             </View>
           )}
@@ -457,14 +746,16 @@ export default function DocumentVerification() {
             <Ionicons
               name={isUploaded ? "eye" : "cloud-upload"}
               size={20}
-              color={isEditable || isUploaded ? "#00AA66" : "#999"}
+              color={
+                isEditable || isUploaded ? colors.primary : colors.textSecondary
+              }
             />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.secondaryBtn,
-              !isEditable && { backgroundColor: "#ddd" },
+              !isEditable && { backgroundColor: colors.border },
             ]}
             onPress={() => pickImage(docName)}
             disabled={!isEditable}
@@ -479,7 +770,7 @@ export default function DocumentVerification() {
           <TouchableOpacity
             style={[
               styles.secondaryBtn,
-              !isEditable && { backgroundColor: "#ddd" },
+              !isEditable && { backgroundColor: colors.border },
             ]}
             onPress={() => openCamera(docName)}
             disabled={!isEditable}
@@ -495,73 +786,6 @@ export default function DocumentVerification() {
     );
   };
 
-  const handleSubmitDocuments = async () => {
-    if (!isEditable) {
-      Alert.alert("Not Editable", "Documents have already been submitted.");
-      return;
-    }
-
-    // Validate all required documents are uploaded
-    const missingDocs = requiredDocs.filter((reqDoc) => {
-      const docData = documentData[reqDoc.docName];
-      return !docData?.docUrl;
-    });
-
-    if (missingDocs.length > 0) {
-      Alert.alert(
-        "Missing Documents",
-        `Please upload: ${missingDocs.map((d) => d.docName).join(", ")}`
-      );
-      return;
-    }
-
-    // Validate expiration dates for documents that require them
-    const invalidExpirations = requiredDocs.filter((reqDoc) => {
-      const docData = documentData[reqDoc.docName];
-      return reqDoc.requiresExpiration && !docData?.expirationDate;
-    });
-
-    if (invalidExpirations.length > 0) {
-      Alert.alert(
-        "Missing Expiration Dates",
-        `Please provide expiration dates for: ${invalidExpirations
-          .map((d) => d.docName)
-          .join(", ")}`
-      );
-      return;
-    }
-
-    try {
-      // Build documents array
-      const documentsToUpload: IDocumentUpload[] = Object.values(
-        documentData
-      ).map((doc) => ({
-        docName: doc.docName,
-        docUrl: doc.docUrl,
-        expirationDate: doc.expirationDate,
-      }));
-
-      // First, upload the documents
-      await uploadDocuments(documentsToUpload);
-
-      // Then, update the rider status to PENDING
-      await updateRider({ documentStatus: "PENDING" }).unwrap();
-
-      Alert.alert("Success", "Your documents have been submitted for review.");
-      // Optionally navigate back
-      // (navigation as any).goBack();
-      router.back();
-    } catch (err: any) {
-      console.error("Submit error:", err);
-      Alert.alert(
-        "Submission Failed",
-        err?.response?.data?.message ||
-          err?.message ||
-          "Could not submit documents."
-      );
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
@@ -570,7 +794,7 @@ export default function DocumentVerification() {
             style={styles.backBtn}
             onPress={() => router.back()}
           >
-            <Ionicons name="chevron-back" size={24} color="#333" />
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.title}>Documents Approval Status</Text>
         </View>
@@ -584,8 +808,8 @@ export default function DocumentVerification() {
                 status === "APPROVED"
                   ? styles.approved
                   : status === "REJECTED"
-                  ? styles.rejected
-                  : styles.pending,
+                    ? styles.rejected
+                    : styles.pending,
               ]}
             >
               {status}
@@ -699,7 +923,7 @@ export default function DocumentVerification() {
 
         <View style={styles.section}>
           {loadingRequiredDocs ? (
-            <ActivityIndicator size="large" color="#00AA66" />
+            <ActivityIndicator size="large" color={colors.primary} />
           ) : (
             Object.values(documentData).map((docData) => renderDocRow(docData))
           )}
@@ -719,7 +943,7 @@ export default function DocumentVerification() {
             }
           >
             {uploading || updating || uploadingDocuments ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.surface} />
             ) : (
               <Text style={styles.primaryText}>Submit Documents</Text>
             )}
@@ -734,7 +958,7 @@ export default function DocumentVerification() {
               style={styles.closeBtn}
               onPress={() => setPreviewUri(null)}
             >
-              <Ionicons name="close" size={24} color="#333" />
+              <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
             {previewUri ? (
               <Image
@@ -767,7 +991,7 @@ export default function DocumentVerification() {
                 onChange={(event, date) =>
                   handleDateChange(showDatePicker, event, date)
                 }
-                textColor="#000"
+                textColor={colors.text}
               />
             </View>
           </View>
@@ -788,186 +1012,3 @@ export default function DocumentVerification() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  title: { fontSize: 18, fontWeight: "700", padding: 16 },
-  statusBox: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: "#eee",
-  },
-  statusLabel: { color: "#666", marginBottom: 8 },
-  statusRow: { flexDirection: "row", alignItems: "center" },
-  statusPill: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    color: "#fff",
-    fontWeight: "600",
-  },
-  miniStatusPill: {
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    borderRadius: 10,
-  },
-  miniStatusText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  approved: { backgroundColor: "#00AA66" },
-  pending: { backgroundColor: "#ff9800" },
-  rejected: { backgroundColor: "#d32f2f" },
-  note: { marginTop: 10, color: "#444" },
-
-  section: { padding: 16 },
-  label: { color: "#333", marginBottom: 8, fontWeight: "600" },
-  dropdownRow: { flexDirection: "row", gap: 8 },
-  typeBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: "#f3f3f3",
-  },
-  typeBtnActive: { backgroundColor: "#00AA66" },
-  typeText: { color: "#333" },
-  typeTextActive: { color: "#fff", fontWeight: "700" },
-
-  docRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  docLabel: { fontWeight: "600", color: "#222" },
-  docSub: { color: "#666", fontSize: 12, marginTop: 4 },
-  rejectionText: {
-    color: "#d32f2f",
-    fontSize: 11,
-    marginTop: 4,
-    fontStyle: "italic",
-  },
-  expirationLabel: {
-    color: "#555",
-    fontSize: 12,
-    marginBottom: 4,
-    fontWeight: "500",
-  },
-  expirationInput: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    fontSize: 14,
-    color: "#333",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  datePickerText: {
-    fontSize: 14,
-    color: "#333",
-  },
-  datePickerModalBg: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  datePickerContainer: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    paddingBottom: 20,
-  },
-  datePickerHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  datePickerCancel: {
-    fontSize: 16,
-    color: "#666",
-  },
-  datePickerDone: {
-    fontSize: 16,
-    color: "#00AA66",
-    fontWeight: "600",
-  },
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: "#f3f7f5",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 8,
-  },
-  secondaryBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: "#eee",
-    borderRadius: 8,
-    marginRight: 6,
-  },
-  secondaryText: { color: "#333" },
-
-  primaryBtn: {
-    backgroundColor: "#00AA66",
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  primaryText: { color: "#fff", fontWeight: "700" },
-
-  modalBg: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    width: "92%",
-    height: "78%",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 12,
-  },
-  closeBtn: { position: "absolute", top: 12, right: 12, zIndex: 10 },
-  previewImage: { width: "100%", height: "100%" },
-  warningRow: {
-    marginTop: 12,
-    backgroundColor: "#fff3e0",
-    borderRadius: 8,
-    padding: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  warningIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#ff9800",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  warningText: {
-    flex: 1,
-    color: "#a94400",
-    fontWeight: "900",
-    textTransform: "uppercase",
-    fontSize: 12,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-  },
-  backBtn: { padding: 6, marginRight: 8 },
-});

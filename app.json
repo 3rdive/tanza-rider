@@ -12,7 +12,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.thirdive.tanzago",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Tanza Go needs access to your camera so you can take profile and document photos.",
+        "NSPhotoLibraryUsageDescription": "Tanza Go needs access to your photo library so you can select profile and document images.",
+        "NSPhotoLibraryAddUsageDescription": "Tanza Go may save images to your photo library (for example, when saving receipts or copies)."
       }
     },
     "android": {
@@ -30,7 +33,11 @@
       },
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES"
       ]
     },
     "web": {

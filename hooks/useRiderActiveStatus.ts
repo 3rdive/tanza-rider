@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { riderService, RiderActiveStatus } from "@/lib/api";
 import { useDeviceLocation } from "@/hooks/location.hook";
 import { useUser } from "../redux/hooks/hooks";
-import { io } from "socket.io-client";
+
 import { createSocket } from "@/lib/socket";
 
 type ReturnType = {
@@ -23,10 +23,25 @@ export function useRiderActiveStatus(): ReturnType {
   const [clientSocket, setClientSocket] = useState<any>(null);
 
   // refs for movement emission throttling/dedup
-  const lastEmitAtRef = useRef<number>(0);
-  const lastCoordsRef = useRef<{ lat?: string | null; lon?: string | null }>(
-    {}
-  );
+  const lastSentCoordsRef = useRef<{
+    lat?: string | null;
+    lon?: string | null;
+  }>({});
+  // Keep track of latest coords in ref to access in interval without re-binding
+  const latestCoordsRef = useRef<{ lat?: string | null; lon?: string | null }>({
+    lat: null,
+    lon: null,
+  });
+
+  // Update refs when location changes
+  useEffect(() => {
+    if (latitude != null && longitude != null) {
+      latestCoordsRef.current = {
+        lat: String(latitude),
+        lon: String(longitude),
+      };
+    }
+  }, [latitude, longitude]);
 
   useEffect(() => {
     // Fetch current active status via HTTP on mount
@@ -92,42 +107,56 @@ export function useRiderActiveStatus(): ReturnType {
     };
   }, [user?.id, access_token]);
 
-  // Emit movement updates while active. Throttle and dedupe identical coords.
+  // Combined location update logic: Polls for location and sends if changed
   useEffect(() => {
-    const THROTTLE_MS = 2000;
-    if (!clientSocket) return;
-    if (status !== "active") return;
-    if (!user?.id) return;
-    if (latitude == null || longitude == null) return;
+    const INTERVAL_MS = 5000; // Check every 5 seconds
 
-    const lat = String(latitude);
-    const lon = String(longitude);
-    const now = Date.now();
+    if (status !== "active" || !clientSocket || !user?.id) return;
 
-    // dedupe identical coords
-    if (
-      lastCoordsRef.current.lat === lat &&
-      lastCoordsRef.current.lon === lon
-    ) {
-      return;
-    }
+    const checkAndSendLocation = async () => {
+      try {
+        // 1. Force a fresh location fetch
+        await getUserLocation(false);
 
-    // throttle
-    if (now - lastEmitAtRef.current < THROTTLE_MS) {
-      return;
-    }
+        // 2. Get latest coords (either from state update or ref if we had one,
+        // but here we rely on the ref updated by the other effect)
+        const currentLat = latestCoordsRef.current.lat;
+        const currentLon = latestCoordsRef.current.lon;
 
-    const channel = `rider.${user.id}.status` as const;
-    clientSocket.emit(channel, {
-      userId: user.id,
-      latitude: lat,
-      longitude: lon,
-    });
+        if (!currentLat || !currentLon) return;
 
-    lastEmitAtRef.current = now;
-    lastCoordsRef.current = { lat, lon };
-    setLastUpdate(new Date().toISOString());
-  }, [latitude, longitude, clientSocket, status, user?.id]);
+        // 3. Dedupe: Check if different from last sent
+        if (
+          lastSentCoordsRef.current.lat === currentLat &&
+          lastSentCoordsRef.current.lon === currentLon
+        ) {
+          return;
+        }
+
+        // 4. Send
+        const channel = `rider.${user.id}.status` as const;
+        clientSocket.emit(channel, {
+          userId: user.id,
+          latitude: currentLat,
+          longitude: currentLon,
+        });
+
+        // 5. Update tracking refs/state
+        lastSentCoordsRef.current = { lat: currentLat, lon: currentLon };
+        setLastUpdate(new Date().toISOString());
+      } catch (error) {
+        if (__DEV__) console.warn("Location update error:", error);
+      }
+    };
+
+    // Run immediately
+    checkAndSendLocation();
+
+    // Run interval
+    const intervalId = setInterval(checkAndSendLocation, INTERVAL_MS);
+
+    return () => clearInterval(intervalId);
+  }, [status, clientSocket, user?.id, getUserLocation]);
 
   const setActive = useCallback(
     async (active: boolean) => {

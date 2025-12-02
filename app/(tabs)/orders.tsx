@@ -12,13 +12,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { useOrders, OrderTab } from "@/hooks/useOrders";
 import { IOrderHistoryItem, orderService } from "@/lib/api";
 import { useAlert } from "@/hooks/useAlert";
-import { tzColors } from "@/theme/color";
+
+import { useTheme } from "@/context/ThemeContext";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 
 export default function HistoryScreen() {
   const router = useRouter();
   const alert = useAlert();
+  const { colors } = useTheme();
   const { tab } = useLocalSearchParams<{ tab?: string }>();
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const {
@@ -141,7 +143,7 @@ export default function HistoryScreen() {
           <>
             {/* For ongoing/upcoming orders, show pickup and dropoff */}
             <View style={styles.row}>
-              <Ionicons name="navigate" size={16} color={tzColors.primary} />
+              <Ionicons name="navigate" size={16} color={colors.primary} />
               <Text style={styles.locationText} numberOfLines={1}>
                 {item.pickUpLocationAddress}
               </Text>
@@ -211,7 +213,7 @@ export default function HistoryScreen() {
     if (!loadingMore) return null;
     return (
       <View style={styles.loadingMore}>
-        <ActivityIndicator size="small" color={tzColors.primary} />
+        <ActivityIndicator size="small" color={colors.primary} />
         <Text style={styles.loadingMoreText}>Loading more...</Text>
       </View>
     );
@@ -222,6 +224,156 @@ export default function HistoryScreen() {
       loadMore();
     }
   };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingHorizontal: 16,
+      paddingTop: 90,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 20,
+    },
+    headerTitle: { fontSize: 20, fontWeight: "700", color: colors.text },
+
+    /* Tabs */
+    tabs: {
+      flexDirection: "row",
+      borderWidth: 1,
+      borderColor: colors.primary,
+      borderRadius: 10,
+      overflow: "hidden",
+    },
+    tab: {
+      flex: 1,
+      paddingVertical: 10,
+      backgroundColor: colors.tabBackground,
+      alignItems: "center",
+    },
+    activeTab: {
+      backgroundColor: colors.primary,
+    },
+    tabText: { fontWeight: "500", color: colors.primary },
+    activeTabText: { color: "#fff", fontWeight: "600" },
+
+    /* List */
+    listContent: {
+      paddingTop: 10,
+      paddingBottom: 20,
+    },
+
+    /* Cards */
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      padding: 14,
+      marginBottom: 12,
+      position: "relative",
+    },
+    row: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+    locationText: { marginLeft: 8, color: colors.text, fontSize: 13, flex: 1 },
+    detailsRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      marginTop: 8,
+      paddingTop: 6,
+    },
+    etaContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    etaText: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    detailLabel: { fontSize: 13, color: colors.textSecondary },
+    detailValue: {
+      fontSize: 14,
+      color: colors.primary,
+      fontWeight: "600",
+    },
+    roleBadge: {
+      position: "absolute",
+      top: 8,
+      right: 8,
+      backgroundColor: colors.roleBadgeBackground,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+    },
+    roleText: {
+      fontSize: 10,
+      color: colors.primary,
+      fontWeight: "600",
+      textTransform: "uppercase",
+    },
+
+    /* Empty State */
+    emptyState: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingVertical: 80,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.text,
+      marginTop: 16,
+    },
+    emptySubtitle: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginTop: 8,
+      textAlign: "center",
+      paddingHorizontal: 40,
+    },
+
+    /* Loading States */
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingVertical: 80,
+    },
+    loadingText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginTop: 12,
+    },
+    loadingMore: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      paddingVertical: 16,
+      gap: 8,
+    },
+    loadingMoreText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+    },
+    acceptButton: {
+      marginTop: 10,
+      backgroundColor: colors.primary,
+      borderRadius: 8,
+      paddingVertical: 10,
+      alignItems: "center",
+    },
+    acceptButtonText: {
+      color: "#fff",
+      fontWeight: "600",
+    },
+  });
 
   return (
     <View style={styles.container}>
@@ -248,7 +400,7 @@ export default function HistoryScreen() {
       {/* Order List */}
       {loading && orders.length === 0 ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={tzColors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading orders...</Text>
         </View>
       ) : (
@@ -265,8 +417,8 @@ export default function HistoryScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[tzColors.primary]}
-              tintColor={tzColors.primary}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
         />
@@ -274,153 +426,3 @@ export default function HistoryScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8f8f8",
-    paddingHorizontal: 16,
-    paddingTop: 90,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  headerTitle: { fontSize: 20, fontWeight: "700", color: "#222" },
-
-  /* Tabs */
-  tabs: {
-    flexDirection: "row",
-    borderWidth: 1,
-    borderColor: tzColors.primary,
-    borderRadius: 10,
-    overflow: "hidden",
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    backgroundColor: "#E6F5EF",
-    alignItems: "center",
-  },
-  activeTab: {
-    backgroundColor: tzColors.primary,
-  },
-  tabText: { fontWeight: "500", color: tzColors.primary },
-  activeTabText: { color: "#fff", fontWeight: "600" },
-
-  /* List */
-  listContent: {
-    paddingTop: 10,
-    paddingBottom: 20,
-  },
-
-  /* Cards */
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: tzColors.primary,
-    padding: 14,
-    marginBottom: 12,
-    position: "relative",
-  },
-  row: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
-  locationText: { marginLeft: 8, color: "#333", fontSize: 13, flex: 1 },
-  detailsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-    marginTop: 8,
-    paddingTop: 6,
-  },
-  etaContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  etaText: {
-    fontSize: 12,
-    color: "#777",
-  },
-  detailLabel: { fontSize: 13, color: "#777" },
-  detailValue: {
-    fontSize: 14,
-    color: tzColors.primary,
-    fontWeight: "600",
-  },
-  roleBadge: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    backgroundColor: "#E6F5EF",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  roleText: {
-    fontSize: 10,
-    color: tzColors.primary,
-    fontWeight: "600",
-    textTransform: "uppercase",
-  },
-
-  /* Empty State */
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 80,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
-    marginTop: 16,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: "#777",
-    marginTop: 8,
-    textAlign: "center",
-    paddingHorizontal: 40,
-  },
-
-  /* Loading States */
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 80,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: "#777",
-    marginTop: 12,
-  },
-  loadingMore: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 16,
-    gap: 8,
-  },
-  loadingMoreText: {
-    fontSize: 13,
-    color: "#777",
-  },
-  acceptButton: {
-    marginTop: 10,
-    backgroundColor: tzColors.primary,
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  acceptButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-});

@@ -217,6 +217,7 @@ export default function PaymentMethodsScreen() {
         accountNumber: form.accountNumber.trim(),
         bankHoldersName: form.bankHoldersName.trim(),
         slug: form.slug.trim(),
+        bankCode: form.bankCode.trim(),
       });
 
       // Clear form
@@ -329,7 +330,7 @@ export default function PaymentMethodsScreen() {
             <Ionicons name="card-outline" size={64} color="#ccc" />
             <Text style={styles.emptyStateTitle}>No Payment Methods</Text>
             <Text style={styles.emptyStateText}>
-              Add your first payment method below
+              Add your payment method below
             </Text>
           </View>
         )}

@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { IActiveOrder, orderService } from "@/lib/api";
 import DeliveryProgress from "./DeliveryProgress";
 import { statuses } from "@/lib/constants";
+import { useTheme } from "../../context/ThemeContext";
 
 type Props = {
   status: string;
@@ -37,6 +38,7 @@ export default function ActiveDeliveryCard({
   updatingStatus = false,
   onRefetchOrders,
 }: Props) {
+  const { colors } = useTheme();
   const [isExpanded, setIsExpanded] = useState(true);
   const animatedHeight = useRef(new Animated.Value(1)).current;
   const animatedOpacity = useRef(new Animated.Value(1)).current;
@@ -181,8 +183,300 @@ export default function ActiveDeliveryCard({
     return isNextStepDelivered() && !allDestinationsDelivered();
   };
 
+  const styles = StyleSheet.create({
+    deliveryCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 20,
+    },
+    deliveryHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingBottom: 10,
+    },
+    heading: {
+      fontSize: 18,
+      fontWeight: "600",
+      marginBottom: 0,
+      color: colors.text,
+    },
+    deliveryContent: { paddingTop: 10 },
+    skeleton: {
+      height: 12,
+      backgroundColor: colors.border,
+      borderRadius: 6,
+      marginBottom: 8,
+    },
+    row: { flexDirection: "row", alignItems: "center" },
+    name: { fontWeight: "700", fontSize: 16, color: colors.text },
+    phoneRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginTop: 2,
+    },
+    contact: { color: colors.success },
+    packageInfo: { color: colors.textSecondary, marginTop: 4 },
+    infoRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: 16,
+    },
+    infoBox: { alignItems: "center", flex: 1 },
+    infoLabel: { fontSize: 12, color: colors.textSecondary },
+    infoValue: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.text,
+      marginTop: 2,
+    },
+    actionBtn: {
+      backgroundColor: colors.success,
+      borderRadius: 10,
+      paddingVertical: 12,
+      alignItems: "center",
+      marginTop: 20,
+    },
+    actionBtnDisabled: {
+      backgroundColor: colors.border,
+      opacity: 0.7,
+    },
+    loadingContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    actionText: { color: colors.background, fontWeight: "600", fontSize: 15 },
+    pastBtn: {
+      backgroundColor: colors.surface,
+      borderRadius: 10,
+      paddingVertical: 12,
+      alignItems: "center",
+    },
+    pastBtnText: { color: colors.success, fontWeight: "600" },
+    avatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+    },
+    noteContainer: {
+      marginTop: 16,
+      backgroundColor: colors.surface,
+      borderRadius: 10,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    noteHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 8,
+      gap: 6,
+    },
+    noteHeaderText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.success,
+    },
+    noteText: {
+      fontSize: 14,
+      lineHeight: 20,
+      color: colors.text,
+    },
+    // New detailed styles
+    sectionContainer: {
+      marginVertical: 8,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 12,
+      gap: 8,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    dividerLine: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: 16,
+    },
+    userDetailsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginTop: 4,
+    },
+    userEmail: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    orderDetailsGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+    },
+    detailItem: {
+      width: "48%",
+      backgroundColor: colors.surface,
+      padding: 12,
+      borderRadius: 8,
+      marginBottom: 8,
+    },
+    detailLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginBottom: 4,
+    },
+    detailValue: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    statusText: {
+      color: colors.success,
+    },
+    amountText: {
+      color: colors.success,
+      fontSize: 16,
+    },
+    urgentText: {
+      color: "#FF6B35",
+      fontSize: 12,
+    },
+    normalText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+    },
+    locationContainer: {
+      paddingLeft: 8,
+    },
+    locationItem: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      marginVertical: 8,
+    },
+    locationIconContainer: {
+      marginRight: 12,
+      marginTop: 2,
+    },
+    locationInfo: {
+      flex: 1,
+    },
+    locationLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginBottom: 4,
+      fontWeight: "500",
+    },
+    locationText: {
+      fontSize: 14,
+      color: colors.text,
+      lineHeight: 20,
+    },
+    locationConnector: {
+      width: 2,
+      height: 20,
+      backgroundColor: colors.border,
+      marginLeft: 11,
+      marginVertical: 4,
+    },
+    etaContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      padding: 12,
+      borderRadius: 8,
+      gap: 8,
+    },
+    etaText: {
+      fontSize: 15,
+      fontWeight: "600",
+      flex: 1,
+      color: colors.text,
+    },
+    etaOnTimeText: {
+      color: colors.success,
+    },
+    etaLateText: {
+      color: "#FF3B30",
+    },
+    contactCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 10,
+      padding: 14,
+      marginBottom: 4,
+    },
+    contactHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 12,
+    },
+    contactRole: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    contactDetails: {
+      gap: 10,
+    },
+    contactRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    contactText: {
+      fontSize: 14,
+      color: colors.text,
+      flex: 1,
+    },
+    copyButton: {
+      padding: 4,
+    },
+    markDeliveredBtn: {
+      backgroundColor: colors.success,
+      borderRadius: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      marginTop: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    markDeliveredBtnDisabled: {
+      backgroundColor: colors.border,
+      opacity: 0.6,
+    },
+    markDeliveredText: {
+      color: colors.background,
+      fontWeight: "600",
+      fontSize: 13,
+    },
+    warningContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "#FFF3E0",
+      padding: 12,
+      borderRadius: 8,
+      marginBottom: 12,
+      gap: 8,
+    },
+    warningText: {
+      flex: 1,
+      fontSize: 13,
+      color: "#FF6B35",
+      fontWeight: "500",
+    },
+  });
+
   return (
     <View style={styles.deliveryCard}>
+      {/* Header */}
       <TouchableOpacity
         style={styles.deliveryHeader}
         onPress={toggleExpanded}
@@ -201,7 +495,11 @@ export default function ActiveDeliveryCard({
             ],
           }}
         >
-          <Ionicons name="chevron-down" size={24} color="#666" />
+          <Ionicons
+            name="chevron-down"
+            size={24}
+            color={colors.textSecondary}
+          />
         </Animated.View>
       </TouchableOpacity>
 
@@ -226,7 +524,7 @@ export default function ActiveDeliveryCard({
         )}
         {error && (
           <View style={{ paddingVertical: 12 }}>
-            <Text style={{ color: "#d9534f", marginBottom: 8 }}>
+            <Text style={{ color: colors.error, marginBottom: 8 }}>
               Failed to load rider info.
             </Text>
             {onRetry && (
@@ -239,7 +537,7 @@ export default function ActiveDeliveryCard({
 
         {!loading && !error && !activeOrder && (
           <View style={{ paddingVertical: 12 }}>
-            <Text style={{ color: "#999", textAlign: "center" }}>
+            <Text style={{ color: colors.textSecondary, textAlign: "center" }}>
               No active orders
             </Text>
           </View>
@@ -250,7 +548,7 @@ export default function ActiveDeliveryCard({
             {/* Customer Info Section */}
             <View style={styles.sectionContainer}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="person" size={20} color="#00AA66" />
+                <Ionicons name="person" size={20} color={colors.success} />
                 <Text style={styles.sectionTitle}>Customer Information</Text>
               </View>
 
@@ -261,23 +559,35 @@ export default function ActiveDeliveryCard({
                     style={styles.avatar}
                   />
                 ) : (
-                  <Ionicons name="person-circle" size={48} color="#9CA3AF" />
+                  <Ionicons
+                    name="person-circle"
+                    size={48}
+                    color={colors.textSecondary}
+                  />
                 )}
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={styles.name}>{activeOrder.userFullName}</Text>
                   <View style={styles.phoneRow}>
-                    <Ionicons name="call" size={16} color="#00AA66" />
+                    <Ionicons name="call" size={16} color={colors.success} />
                     <Text style={styles.contact}>
                       {activeOrder.userMobileNumber}
                     </Text>
                     <TouchableOpacity
                       onPress={() => onCopy(activeOrder.userMobileNumber)}
                     >
-                      <Ionicons name="copy-outline" size={18} color="#00AA66" />
+                      <Ionicons
+                        name="copy-outline"
+                        size={18}
+                        color={colors.success}
+                      />
                     </TouchableOpacity>
                   </View>
                   <View style={styles.userDetailsRow}>
-                    <Ionicons name="mail" size={14} color="#666" />
+                    <Ionicons
+                      name="mail"
+                      size={14}
+                      color={colors.textSecondary}
+                    />
                     <Text style={styles.userEmail}>Contact via phone</Text>
                   </View>
                 </View>
@@ -292,7 +602,7 @@ export default function ActiveDeliveryCard({
                 <Ionicons
                   name="time"
                   size={20}
-                  color={isLate ? "#FF3B30" : "#00AA66"}
+                  color={isLate ? "#FF3B30" : colors.success}
                 />
                 <Text
                   style={[
@@ -312,7 +622,11 @@ export default function ActiveDeliveryCard({
             {/* Order Details Section */}
             <View style={styles.sectionContainer}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="document-text" size={20} color="#00AA66" />
+                <Ionicons
+                  name="document-text"
+                  size={20}
+                  color={colors.success}
+                />
                 <Text style={styles.sectionTitle}>Order Details</Text>
               </View>
 
@@ -339,7 +653,7 @@ export default function ActiveDeliveryCard({
               <>
                 <View style={styles.sectionContainer}>
                   <View style={styles.sectionHeader}>
-                    <Ionicons name="people" size={20} color="#00AA66" />
+                    <Ionicons name="people" size={20} color={colors.success} />
                     <Text style={styles.sectionTitle}>Sender & Recipient</Text>
                   </View>
 
@@ -355,13 +669,21 @@ export default function ActiveDeliveryCard({
                     </View>
                     <View style={styles.contactDetails}>
                       <View style={styles.contactRow}>
-                        <Ionicons name="person" size={16} color="#666" />
+                        <Ionicons
+                          name="person"
+                          size={16}
+                          color={colors.textSecondary}
+                        />
                         <Text style={styles.contactText}>
                           {activeOrder.sender.name}
                         </Text>
                       </View>
                       <View style={styles.contactRow}>
-                        <Ionicons name="call" size={16} color="#666" />
+                        <Ionicons
+                          name="call"
+                          size={16}
+                          color={colors.textSecondary}
+                        />
                         <Text style={styles.contactText}>
                           {activeOrder.sender.phone}
                         </Text>
@@ -372,12 +694,16 @@ export default function ActiveDeliveryCard({
                           <Ionicons
                             name="copy-outline"
                             size={16}
-                            color="#00AA66"
+                            color={colors.success}
                           />
                         </TouchableOpacity>
                       </View>
                       <View style={styles.contactRow}>
-                        <Ionicons name="mail" size={16} color="#666" />
+                        <Ionicons
+                          name="mail"
+                          size={16}
+                          color={colors.textSecondary}
+                        />
                         <Text style={styles.contactText}>
                           {activeOrder.sender.email}
                         </Text>
@@ -388,7 +714,7 @@ export default function ActiveDeliveryCard({
                           <Ionicons
                             name="copy-outline"
                             size={16}
-                            color="#00AA66"
+                            color={colors.success}
                           />
                         </TouchableOpacity>
                       </View>
@@ -401,19 +727,27 @@ export default function ActiveDeliveryCard({
                       <Ionicons
                         name="arrow-down-circle"
                         size={20}
-                        color="#00AA66"
+                        color={colors.success}
                       />
                       <Text style={styles.contactRole}>Recipient</Text>
                     </View>
                     <View style={styles.contactDetails}>
                       <View style={styles.contactRow}>
-                        <Ionicons name="person" size={16} color="#666" />
+                        <Ionicons
+                          name="person"
+                          size={16}
+                          color={colors.textSecondary}
+                        />
                         <Text style={styles.contactText}>
                           {activeOrder.recipient.name}
                         </Text>
                       </View>
                       <View style={styles.contactRow}>
-                        <Ionicons name="call" size={16} color="#666" />
+                        <Ionicons
+                          name="call"
+                          size={16}
+                          color={colors.textSecondary}
+                        />
                         <Text style={styles.contactText}>
                           {activeOrder.recipient.phone}
                         </Text>
@@ -424,12 +758,16 @@ export default function ActiveDeliveryCard({
                           <Ionicons
                             name="copy-outline"
                             size={16}
-                            color="#00AA66"
+                            color={colors.success}
                           />
                         </TouchableOpacity>
                       </View>
                       <View style={styles.contactRow}>
-                        <Ionicons name="mail" size={16} color="#666" />
+                        <Ionicons
+                          name="mail"
+                          size={16}
+                          color={colors.textSecondary}
+                        />
                         <Text style={styles.contactText}>
                           {activeOrder.recipient.email}
                         </Text>
@@ -440,7 +778,7 @@ export default function ActiveDeliveryCard({
                           <Ionicons
                             name="copy-outline"
                             size={16}
-                            color="#00AA66"
+                            color={colors.success}
                           />
                         </TouchableOpacity>
                       </View>
@@ -455,7 +793,7 @@ export default function ActiveDeliveryCard({
             {/* Location Details Section */}
             <View style={styles.sectionContainer}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="location" size={20} color="#00AA66" />
+                <Ionicons name="location" size={20} color={colors.success} />
                 <Text style={styles.sectionTitle}>Pickup & Delivery</Text>
               </View>
 
@@ -492,7 +830,9 @@ export default function ActiveDeliveryCard({
                                 name="arrow-down-circle"
                                 size={24}
                                 color={
-                                  destination.delivered ? "#00AA66" : "#FFA500"
+                                  destination.delivered
+                                    ? colors.success
+                                    : "#FFA500"
                                 }
                               />
                             </View>
@@ -511,7 +851,7 @@ export default function ActiveDeliveryCard({
                                   <Ionicons
                                     name="checkmark-circle"
                                     size={16}
-                                    color="#00AA66"
+                                    color={colors.success}
                                   />
                                 )}
                               </View>
@@ -519,13 +859,19 @@ export default function ActiveDeliveryCard({
                                 {destination.dropOffLocation.address}
                               </Text>
                               <Text
-                                style={[styles.locationLabel, { marginTop: 4 }]}
+                                style={[
+                                  styles.locationLabel,
+                                  { marginTop: 4, color: colors.text },
+                                ]}
                               >
                                 {destination.recipient.name} •{" "}
                                 {destination.recipient.phone}
                               </Text>
                               <Text
-                                style={[styles.locationLabel, { marginTop: 2 }]}
+                                style={[
+                                  styles.locationLabel,
+                                  { marginTop: 2, color: colors.text },
+                                ]}
                               >
                                 {destination.distanceFromPickupKm.toFixed(2)} km
                                 • ₦{destination.deliveryFee.toLocaleString()}
@@ -587,7 +933,7 @@ export default function ActiveDeliveryCard({
                                   <Text
                                     style={[
                                       styles.locationLabel,
-                                      { marginTop: 4, color: "#00AA66" },
+                                      { marginTop: 4, color: colors.success },
                                     ]}
                                   >
                                     ✓ Delivered at{" "}
@@ -612,7 +958,7 @@ export default function ActiveDeliveryCard({
                       <Ionicons
                         name="arrow-down-circle"
                         size={24}
-                        color="#00AA66"
+                        color={colors.success}
                       />
                     </View>
                     <View style={styles.locationInfo}>
@@ -637,7 +983,7 @@ export default function ActiveDeliveryCard({
                     <Ionicons
                       name="chatbubble-ellipses"
                       size={20}
-                      color="#00AA66"
+                      color={colors.success}
                     />
                     <Text style={styles.sectionTitle}>Customer Note</Text>
                   </View>
@@ -698,283 +1044,3 @@ export default function ActiveDeliveryCard({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  deliveryCard: {
-    backgroundColor: "#f3f7f5",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 20,
-  },
-  deliveryHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingBottom: 10,
-  },
-  heading: { fontSize: 18, fontWeight: "600", marginBottom: 0 },
-  deliveryContent: { paddingTop: 10 },
-  skeleton: {
-    height: 12,
-    backgroundColor: "#eaeaea",
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  row: { flexDirection: "row", alignItems: "center" },
-  name: { fontWeight: "700", fontSize: 16 },
-  phoneRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 2,
-  },
-  contact: { color: "#007b55" },
-  packageInfo: { color: "#555", marginTop: 4 },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 16,
-  },
-  infoBox: { alignItems: "center", flex: 1 },
-  infoLabel: { fontSize: 12, color: "#777" },
-  infoValue: { fontSize: 15, fontWeight: "600", color: "#222", marginTop: 2 },
-  actionBtn: {
-    backgroundColor: "#00AA66",
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 20,
-  },
-  actionBtnDisabled: {
-    backgroundColor: "#80D4B3",
-    opacity: 0.7,
-  },
-  loadingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionText: { color: "#fff", fontWeight: "600", fontSize: 15 },
-  pastBtn: {
-    backgroundColor: "#e9f5f0",
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  pastBtnText: { color: "#00AA66", fontWeight: "600" },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
-  noteContainer: {
-    marginTop: 16,
-    backgroundColor: "#E6F7EF",
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#C2F2D0",
-  },
-  noteHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-    gap: 6,
-  },
-  noteHeaderText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#00AA66",
-  },
-  noteText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: "#374151",
-  },
-  // New detailed styles
-  sectionContainer: {
-    marginVertical: 8,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-    gap: 8,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-  },
-  dividerLine: {
-    height: 1,
-    backgroundColor: "#E5E7EB",
-    marginVertical: 16,
-  },
-  userDetailsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 4,
-  },
-  userEmail: {
-    fontSize: 12,
-    color: "#666",
-  },
-  orderDetailsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  detailItem: {
-    width: "48%",
-    backgroundColor: "#f8f9fa",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  detailLabel: {
-    fontSize: 12,
-    color: "#666",
-    marginBottom: 4,
-  },
-  detailValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-  },
-  statusText: {
-    color: "#00AA66",
-  },
-  amountText: {
-    color: "#00AA66",
-    fontSize: 16,
-  },
-  urgentText: {
-    color: "#FF6B35",
-    fontSize: 12,
-  },
-  normalText: {
-    color: "#666",
-    fontSize: 12,
-  },
-  locationContainer: {
-    paddingLeft: 8,
-  },
-  locationItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginVertical: 8,
-  },
-  locationIconContainer: {
-    marginRight: 12,
-    marginTop: 2,
-  },
-  locationInfo: {
-    flex: 1,
-  },
-  locationLabel: {
-    fontSize: 12,
-    color: "#666",
-    marginBottom: 4,
-    fontWeight: "500",
-  },
-  locationText: {
-    fontSize: 14,
-    color: "#333",
-    lineHeight: 20,
-  },
-  locationConnector: {
-    width: 2,
-    height: 20,
-    backgroundColor: "#E5E7EB",
-    marginLeft: 11,
-    marginVertical: 4,
-  },
-  etaContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f8f9fa",
-    padding: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  etaText: {
-    fontSize: 15,
-    fontWeight: "600",
-    flex: 1,
-  },
-  etaOnTimeText: {
-    color: "#00AA66",
-  },
-  etaLateText: {
-    color: "#FF3B30",
-  },
-  contactCard: {
-    backgroundColor: "#f8f9fa",
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 4,
-  },
-  contactHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-  },
-  contactRole: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#333",
-  },
-  contactDetails: {
-    gap: 10,
-  },
-  contactRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  contactText: {
-    fontSize: 14,
-    color: "#333",
-    flex: 1,
-  },
-  copyButton: {
-    padding: 4,
-  },
-  markDeliveredBtn: {
-    backgroundColor: "#00AA66",
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  markDeliveredBtnDisabled: {
-    backgroundColor: "#ccc",
-    opacity: 0.6,
-  },
-  markDeliveredText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 13,
-  },
-  warningContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFF3E0",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    gap: 8,
-  },
-  warningText: {
-    flex: 1,
-    fontSize: 13,
-    color: "#FF6B35",
-    fontWeight: "500",
-  },
-});

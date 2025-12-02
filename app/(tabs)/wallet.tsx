@@ -30,8 +30,10 @@ import {
   WALLET_COLORS,
 } from "../../lib/walletConstants";
 import WalletBalanceCard from "@/components/fund_account/WalletBalanceCard";
+import { useTheme } from "../../context/ThemeContext";
 
 const RiderWalletScreen: React.FC = () => {
+  const { colors } = useTheme();
   const {
     walletData,
     isLoading: isLoadingWallet,
@@ -107,12 +109,624 @@ const RiderWalletScreen: React.FC = () => {
     });
   }, [transactions, selectedWeekOption]);
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      backgroundColor: colors.surface,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    balanceCard: {
+      backgroundColor: colors.success,
+      margin: 20,
+      padding: 24,
+      borderRadius: 16,
+      alignItems: "center",
+    },
+    balanceLabel: {
+      fontSize: 16,
+      color: "rgba(255, 255, 255, 0.8)",
+      marginBottom: 8,
+    },
+    balanceAmount: {
+      fontSize: 36,
+      fontWeight: "bold",
+      color: colors.background,
+      marginBottom: 20,
+    },
+    balanceActions: {
+      flexDirection: "row",
+    },
+    withdrawButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "rgba(255, 255, 255, 0.2)",
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 8,
+      gap: 8,
+    },
+    withdrawButtonText: {
+      color: colors.background,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    summaryCard: {
+      backgroundColor: colors.surface,
+      marginHorizontal: 20,
+      marginBottom: 20,
+      padding: 20,
+      borderRadius: 12,
+    },
+    summaryHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 20,
+    },
+    summaryTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    periodToggle: {
+      flexDirection: "row",
+      backgroundColor: colors.border,
+      borderRadius: 8,
+      padding: 2,
+    },
+    periodButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 6,
+    },
+    periodButtonActive: {
+      backgroundColor: colors.success,
+    },
+    periodButtonText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    periodButtonTextActive: {
+      color: colors.background,
+      fontWeight: "600",
+    },
+    summaryStats: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+    statItem: {
+      alignItems: "center",
+    },
+    statValue: {
+      fontSize: 24,
+      fontWeight: "bold",
+      color: colors.success,
+      marginBottom: 4,
+    },
+    statLabel: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    transactionSection: {
+      backgroundColor: colors.surface,
+      marginHorizontal: 20,
+      marginBottom: 20,
+      borderRadius: 12,
+      padding: 20,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 16,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    viewAllText: {
+      fontSize: 14,
+      color: colors.success,
+      fontWeight: "600",
+    },
+    transactionItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      backgroundColor: colors.surface,
+      marginHorizontal: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    transactionIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.background,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 12,
+    },
+    transactionDetails: {
+      flex: 1,
+    },
+    transactionDescription: {
+      fontSize: 16,
+      fontWeight: "500",
+      color: colors.text,
+      marginBottom: 4,
+    },
+    transactionDate: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    transactionRight: {
+      alignItems: "flex-end",
+    },
+    transactionAmount: {
+      fontSize: 16,
+      fontWeight: "600",
+      marginBottom: 4,
+    },
+    statusBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    statusText: {
+      fontSize: 12,
+      fontWeight: "500",
+      textTransform: "capitalize",
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "flex-end",
+    },
+    modalContent: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingBottom: 40,
+    },
+    addMethodModalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "flex-end",
+    },
+    modalBackdrop: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    addMethodModalContent: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      minHeight: "80%",
+      maxHeight: "90%",
+      paddingBottom: 20,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: -2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 10,
+      elevation: 10,
+    },
+    addMethodModalBody: {
+      flex: 1,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    modalBody: {
+      padding: 20,
+    },
+    availableBalance: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: "center",
+      marginBottom: 24,
+    },
+    inputGroup: {
+      marginBottom: 20,
+    },
+    inputLabel: {
+      fontSize: 16,
+      fontWeight: "500",
+      color: colors.text,
+      marginBottom: 8,
+    },
+    amountInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 16,
+      fontSize: 16,
+      backgroundColor: colors.surface,
+      color: colors.text,
+    },
+    inputContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 16,
+    },
+    inputIcon: {
+      marginRight: 12,
+    },
+    enhancedInput: {
+      flex: 1,
+      paddingVertical: 16,
+      fontSize: 16,
+      color: colors.text,
+    },
+    methodHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    addMethodButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    addMethodText: {
+      fontSize: 14,
+      color: colors.success,
+      fontWeight: "600",
+    },
+    methodsList: {
+      maxHeight: 200,
+    },
+    methodItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      marginBottom: 8,
+    },
+    methodItemSelected: {
+      borderColor: colors.success,
+      backgroundColor: colors.surface,
+    },
+    methodInfo: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    methodIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.background,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 12,
+    },
+    methodDetails: {
+      flex: 1,
+    },
+    methodName: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text,
+      marginBottom: 2,
+    },
+    methodSubtext: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    removeButton: {
+      padding: 8,
+    },
+    confirmButton: {
+      backgroundColor: colors.success,
+      padding: 16,
+      borderRadius: 8,
+      alignItems: "center",
+      marginTop: 20,
+    },
+    confirmButtonText: {
+      color: colors.background,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    methodTypeSection: {
+      padding: 20,
+      paddingBottom: 0,
+    },
+    methodTypeGrid: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    methodTypeCard: {
+      flex: 1,
+      backgroundColor: colors.background,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: 16,
+      alignItems: "center",
+    },
+    methodTypeCardActive: {
+      borderColor: colors.success,
+      backgroundColor: colors.surface,
+    },
+    methodTypeIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.border,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    methodTypeIconActive: {
+      backgroundColor: colors.success,
+    },
+    methodTypeTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text,
+      marginBottom: 4,
+    },
+    methodTypeTitleActive: {
+      color: colors.success,
+    },
+    methodTypeSubtitle: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      textAlign: "center",
+    },
+    methodTypeSubtitleActive: {
+      color: colors.success,
+    },
+    formSection: {
+      padding: 20,
+    },
+    previewSection: {
+      marginTop: 20,
+    },
+    previewTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text,
+      marginBottom: 12,
+    },
+    previewCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 16,
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    previewIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.surface,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 12,
+    },
+    previewDetails: {
+      flex: 1,
+    },
+    previewName: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text,
+      marginBottom: 2,
+    },
+    previewSubtext: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    addMethodConfirmButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.success,
+      padding: 18,
+      borderRadius: 12,
+      marginHorizontal: 20,
+      marginTop: 24,
+      gap: 8,
+    },
+    addMethodConfirmButtonDisabled: {
+      backgroundColor: colors.border,
+    },
+    addMethodConfirmButtonText: {
+      color: colors.background,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    filterButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    filterButtonText: {
+      color: colors.success,
+      fontSize: 14,
+      fontWeight: "600",
+      marginRight: 4,
+    },
+    weekModalContent: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      paddingBottom: 20,
+      maxHeight: "50%",
+    },
+    weekOption: {
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 12,
+    },
+    weekOptionSelected: {
+      backgroundColor: colors.success,
+      borderColor: colors.success,
+    },
+    weekOptionText: {
+      fontSize: 16,
+      color: colors.text,
+      fontWeight: "600",
+    },
+    loadingCard: {
+      backgroundColor: colors.surface,
+      margin: 20,
+      padding: 40,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 16,
+      color: colors.textSecondary,
+    },
+    errorCard: {
+      backgroundColor: colors.surface,
+      margin: 20,
+      padding: 32,
+      borderRadius: 16,
+      alignItems: "center",
+    },
+    errorTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.text,
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    errorMessage: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: "center",
+      marginBottom: 20,
+    },
+    retryButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.success,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 8,
+      gap: 8,
+    },
+    retryButtonText: {
+      color: colors.background,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    transactionsLoading: {
+      paddingVertical: 40,
+      alignItems: "center",
+    },
+    transactionsError: {
+      paddingVertical: 32,
+      alignItems: "center",
+    },
+    retryButtonSmall: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 6,
+      gap: 6,
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: colors.success,
+    },
+    retryButtonTextSmall: {
+      color: colors.success,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    emptyState: {
+      paddingVertical: 48,
+      alignItems: "center",
+    },
+    emptyStateText: {
+      marginTop: 12,
+      fontSize: 16,
+      color: colors.textSecondary,
+    },
+    footerLoading: {
+      paddingVertical: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    footerLoadingText: {
+      marginTop: 8,
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    transactionSectionHeader: {
+      backgroundColor: colors.surface,
+      marginHorizontal: 20,
+      marginTop: 20,
+      marginBottom: 0,
+      borderTopLeftRadius: 12,
+      borderTopRightRadius: 12,
+      paddingHorizontal: 20,
+      paddingTop: 20,
+      paddingBottom: 16,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    flatListContent: {
+      flexGrow: 1,
+    },
+  });
+
   // Render footer for loading more
   const renderFooter = () => {
     if (!isLoadingMore) return null;
     return (
       <View style={styles.footerLoading}>
-        <ActivityIndicator size="small" color="#00B624" />
+        <ActivityIndicator size="small" color={colors.success} />
         <Text style={styles.footerLoadingText}>Loading more...</Text>
       </View>
     );
@@ -125,28 +739,31 @@ const RiderWalletScreen: React.FC = () => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Wallet</Text>
         <TouchableOpacity onPress={() => router.push("/profile/notification")}>
-          <Ionicons name="notifications-outline" size={24} color="#000" />
+          <Ionicons
+            name="notifications-outline"
+            size={24}
+            color={colors.text}
+          />
         </TouchableOpacity>
       </View>
 
       <View>
-
         {/* Wallet Balance Summary */}
         {isLoadingWallet ? (
           <View style={styles.loadingCard}>
-            <ActivityIndicator size="large" color="#00B624" />
+            <ActivityIndicator size="large" color={colors.success} />
             <Text style={styles.loadingText}>Loading wallet...</Text>
           </View>
         ) : walletError ? (
           <View style={styles.errorCard}>
-            <Ionicons name="alert-circle" size={48} color="#ef4444" />
+            <Ionicons name="alert-circle" size={48} color={colors.error} />
             <Text style={styles.errorTitle}>Failed to Load Wallet</Text>
             <Text style={styles.errorMessage}>{walletError}</Text>
             <TouchableOpacity
               style={styles.retryButton}
               onPress={refetchWallet}
             >
-              <Ionicons name="refresh" size={20} color="#fff" />
+              <Ionicons name="refresh" size={20} color={colors.background} />
               <Text style={styles.retryButtonText}>Retry</Text>
             </TouchableOpacity>
           </View>
@@ -175,7 +792,7 @@ const RiderWalletScreen: React.FC = () => {
                     ? "Last 4 Weeks"
                     : "All"}
           </Text>
-          <Ionicons name="chevron-down" size={16} color="#00B624" />
+          <Ionicons name="chevron-down" size={16} color={colors.success} />
         </TouchableOpacity>
       </View>
     </>
@@ -186,7 +803,7 @@ const RiderWalletScreen: React.FC = () => {
     if (isLoadingTransactions) {
       return (
         <View style={styles.transactionsLoading}>
-          <ActivityIndicator size="large" color="#00B624" />
+          <ActivityIndicator size="large" color={colors.success} />
           <Text style={styles.loadingText}>Loading transactions...</Text>
         </View>
       );
@@ -195,13 +812,13 @@ const RiderWalletScreen: React.FC = () => {
     if (transactionsError) {
       return (
         <View style={styles.transactionsError}>
-          <Ionicons name="alert-circle" size={32} color="#ef4444" />
+          <Ionicons name="alert-circle" size={32} color={colors.error} />
           <Text style={styles.errorMessage}>{transactionsError}</Text>
           <TouchableOpacity
             style={styles.retryButtonSmall}
             onPress={() => refresh()}
           >
-            <Ionicons name="refresh" size={16} color="#00B624" />
+            <Ionicons name="refresh" size={16} color={colors.success} />
             <Text style={styles.retryButtonTextSmall}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -210,7 +827,11 @@ const RiderWalletScreen: React.FC = () => {
 
     return (
       <View style={styles.emptyState}>
-        <Ionicons name="document-text-outline" size={48} color="#94a3b8" />
+        <Ionicons
+          name="document-text-outline"
+          size={48}
+          color={colors.textSecondary}
+        />
         <Text style={styles.emptyStateText}>No transactions found</Text>
       </View>
     );
@@ -231,8 +852,8 @@ const RiderWalletScreen: React.FC = () => {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={refresh}
-            colors={[WALLET_COLORS.primary]}
-            tintColor={WALLET_COLORS.primary}
+            colors={[colors.success]}
+            tintColor={colors.success}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -247,616 +868,5 @@ const RiderWalletScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#fff",
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#000",
-  },
-  balanceCard: {
-    backgroundColor: "#00B624",
-    margin: 20,
-    padding: 24,
-    borderRadius: 16,
-    alignItems: "center",
-  },
-  balanceLabel: {
-    fontSize: 16,
-    color: "rgba(255, 255, 255, 0.8)",
-    marginBottom: 8,
-  },
-  balanceAmount: {
-    fontSize: 36,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 20,
-  },
-  balanceActions: {
-    flexDirection: "row",
-  },
-  withdrawButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  withdrawButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  summaryCard: {
-    backgroundColor: "#fff",
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 20,
-    borderRadius: 12,
-  },
-  summaryHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000",
-  },
-  periodToggle: {
-    flexDirection: "row",
-    backgroundColor: "#f1f5f9",
-    borderRadius: 8,
-    padding: 2,
-  },
-  periodButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  periodButtonActive: {
-    backgroundColor: "#00B624",
-  },
-  periodButtonText: {
-    fontSize: 14,
-    color: "#64748b",
-  },
-  periodButtonTextActive: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  summaryStats: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  statItem: {
-    alignItems: "center",
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#00B624",
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: "#64748b",
-  },
-  transactionSection: {
-    backgroundColor: "#fff",
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 12,
-    padding: 20,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000",
-  },
-  viewAllText: {
-    fontSize: 14,
-    color: "#00B624",
-    fontWeight: "600",
-  },
-  transactionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: "#fff",
-    marginHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-  },
-  transactionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#f8fafc",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  transactionDetails: {
-    flex: 1,
-  },
-  transactionDescription: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#000",
-    marginBottom: 4,
-  },
-  transactionDate: {
-    fontSize: 14,
-    color: "#64748b",
-  },
-  transactionRight: {
-    alignItems: "flex-end",
-  },
-  transactionAmount: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: "500",
-    textTransform: "capitalize",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 40,
-  },
-  addMethodModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  modalBackdrop: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  addMethodModalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    minHeight: "80%",
-    maxHeight: "90%",
-    paddingBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 10,
-  },
-  addMethodModalBody: {
-    flex: 1,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#000",
-  },
-  modalBody: {
-    padding: 20,
-  },
-  availableBalance: {
-    fontSize: 16,
-    color: "#64748b",
-    textAlign: "center",
-    marginBottom: 24,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#000",
-    marginBottom: 8,
-  },
-  amountInput: {
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 8,
-    padding: 16,
-    fontSize: 16,
-    backgroundColor: "#fff",
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    paddingHorizontal: 16,
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  enhancedInput: {
-    flex: 1,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: "#000",
-  },
-  methodHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  addMethodButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  addMethodText: {
-    fontSize: 14,
-    color: "#00B624",
-    fontWeight: "600",
-  },
-  methodsList: {
-    maxHeight: 200,
-  },
-  methodItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  methodItemSelected: {
-    borderColor: "#00B624",
-    backgroundColor: "#f0fdf4",
-  },
-  methodInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  methodIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#f8fafc",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  methodDetails: {
-    flex: 1,
-  },
-  methodName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
-    marginBottom: 2,
-  },
-  methodSubtext: {
-    fontSize: 14,
-    color: "#64748b",
-  },
-  removeButton: {
-    padding: 8,
-  },
-  confirmButton: {
-    backgroundColor: "#00B624",
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 20,
-  },
-  confirmButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  methodTypeSection: {
-    padding: 20,
-    paddingBottom: 0,
-  },
-  methodTypeGrid: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  methodTypeCard: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-  },
-  methodTypeCardActive: {
-    borderColor: "#00B624",
-    backgroundColor: "#f0fdf4",
-  },
-  methodTypeIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#e2e8f0",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  methodTypeIconActive: {
-    backgroundColor: "#00B624",
-  },
-  methodTypeTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
-    marginBottom: 4,
-  },
-  methodTypeTitleActive: {
-    color: "#00B624",
-  },
-  methodTypeSubtitle: {
-    fontSize: 12,
-    color: "#64748b",
-    textAlign: "center",
-  },
-  methodTypeSubtitleActive: {
-    color: "#00B624",
-  },
-  formSection: {
-    padding: 20,
-  },
-  previewSection: {
-    marginTop: 20,
-  },
-  previewTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
-    marginBottom: 12,
-  },
-  previewCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    backgroundColor: "#f8fafc",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  previewIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  previewDetails: {
-    flex: 1,
-  },
-  previewName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
-    marginBottom: 2,
-  },
-  previewSubtext: {
-    fontSize: 14,
-    color: "#64748b",
-  },
-  addMethodConfirmButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#00B624",
-    padding: 18,
-    borderRadius: 12,
-    marginHorizontal: 20,
-    marginTop: 24,
-    gap: 8,
-  },
-  addMethodConfirmButtonDisabled: {
-    backgroundColor: "#94a3b8",
-  },
-  addMethodConfirmButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  filterButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  filterButtonText: {
-    color: "#00B624",
-    fontSize: 14,
-    fontWeight: "600",
-    marginRight: 4,
-  },
-  weekModalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingBottom: 20,
-    maxHeight: "50%",
-  },
-  weekOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#e6eef1",
-    marginBottom: 12,
-  },
-  weekOptionSelected: {
-    backgroundColor: "#00B624",
-    borderColor: "#00B624",
-  },
-  weekOptionText: {
-    fontSize: 16,
-    color: "#000",
-    fontWeight: "600",
-  },
-  loadingCard: {
-    backgroundColor: "#fff",
-    margin: 20,
-    padding: 40,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#64748b",
-  },
-  errorCard: {
-    backgroundColor: "#fff",
-    margin: 20,
-    padding: 32,
-    borderRadius: 16,
-    alignItems: "center",
-  },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  errorMessage: {
-    fontSize: 14,
-    color: "#64748b",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  retryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#00B624",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  retryButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  transactionsLoading: {
-    paddingVertical: 40,
-    alignItems: "center",
-  },
-  transactionsError: {
-    paddingVertical: 32,
-    alignItems: "center",
-  },
-  retryButtonSmall: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-    gap: 6,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: "#00B624",
-  },
-  retryButtonTextSmall: {
-    color: "#00B624",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  emptyState: {
-    paddingVertical: 48,
-    alignItems: "center",
-  },
-  emptyStateText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#94a3b8",
-  },
-  footerLoading: {
-    paddingVertical: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  footerLoadingText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: "#64748b",
-  },
-  transactionSectionHeader: {
-    backgroundColor: "#fff",
-    marginHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 0,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  flatListContent: {
-    flexGrow: 1,
-  },
-});
 
 export default RiderWalletScreen;

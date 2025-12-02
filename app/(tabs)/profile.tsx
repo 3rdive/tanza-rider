@@ -23,16 +23,18 @@ import { useIsFocused } from "@react-navigation/native";
 import { clearSelectedLocation } from "@/redux/slices/locationSearchSlice";
 import { userService } from "@/lib/api";
 import { useRider } from "../../hooks/rider.hook";
+import { useTheme } from "../../context/ThemeContext";
 
 const UI_SCALE = 0.82; // downscale globally
 const rs = (n: number) => RFValue(n * UI_SCALE);
 
 export default function ProfileScreen() {
+  const { colors } = useTheme();
   const { logOut, user, access_token, setUser } = useUser();
   const dispatch = useAppDispatch();
   const isFocused = useIsFocused();
   const selected = useAppSelector(
-    (s) => (s as any).locationSearch?.selected || null
+    (s) => (s as any).locationSearch?.selected || null,
   );
 
   const firstName = (user as any)?.firstName || "John";
@@ -125,18 +127,174 @@ export default function ProfileScreen() {
               docStatus === "APPROVED"
                 ? styles.approvedPill
                 : docStatus === "REJECTED"
-                ? styles.rejectedPill
-                : styles.pendingPill,
+                  ? styles.rejectedPill
+                  : styles.pendingPill,
             ]}
           >
             {docStatus}
           </Text>
         </View>
       ) : (
-        showArrow && <Ionicons name="chevron-forward" size={18} color="#000" />
+        showArrow && (
+          <Ionicons name="chevron-forward" size={18} color={colors.text} />
+        )
       )}
     </TouchableOpacity>
   );
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: rs(20),
+      paddingVertical: rs(8),
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      width: rs(40),
+      height: rs(40),
+      justifyContent: "center",
+    },
+    backArrow: {
+      fontSize: rs(22),
+      color: colors.text,
+    },
+    headerTitle: {
+      fontSize: rs(18),
+      fontWeight: "bold",
+      color: colors.text,
+    },
+    editButton: {
+      fontSize: rs(14),
+      color: colors.success,
+      fontWeight: "600",
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: rs(20),
+      paddingTop: rs(24),
+    },
+    profileHeader: {
+      alignItems: "center",
+      paddingVertical: rs(32),
+    },
+    avatarContainer: {
+      marginBottom: rs(16),
+    },
+    avatar: {
+      width: rs(80),
+      height: rs(80),
+      borderRadius: rs(40),
+    },
+    avatarFallback: {
+      width: rs(80),
+      height: rs(80),
+      borderRadius: rs(40),
+      backgroundColor: colors.success,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    avatarText: {
+      fontSize: rs(22),
+      fontWeight: "bold",
+      color: colors.background,
+    },
+    userName: {
+      fontSize: rs(22),
+      fontWeight: "bold",
+      color: colors.text,
+      marginBottom: rs(4),
+    },
+    userEmail: {
+      fontSize: rs(14),
+      color: colors.textSecondary,
+    },
+    section: {
+      marginBottom: rs(24),
+    },
+    sectionTitle: {
+      fontSize: rs(16),
+      fontWeight: "bold",
+      color: colors.text,
+      marginBottom: rs(12),
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: rs(12),
+      shadowColor: "#000",
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    profileItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: rs(16),
+      paddingVertical: rs(16),
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    profileItemContent: {
+      flex: 1,
+    },
+    profileItemLabel: {
+      fontSize: rs(12),
+      color: colors.textSecondary,
+      marginBottom: rs(4),
+    },
+    profileItemValue: {
+      fontSize: rs(14),
+      color: colors.text,
+      fontWeight: "500",
+    },
+    arrow: {
+      fontSize: rs(16),
+      color: colors.textSecondary,
+    },
+    accountActionText: {
+      fontSize: rs(14),
+      color: colors.text,
+      flex: 1,
+    },
+    logoutButton: {
+      backgroundColor: "transparent",
+      borderWidth: 1,
+      borderColor: colors.error,
+      borderRadius: rs(12),
+      paddingVertical: rs(16),
+      alignItems: "center",
+      marginBottom: rs(40),
+    },
+    logoutText: {
+      fontSize: rs(14),
+      color: colors.error,
+      fontWeight: "600",
+    },
+    docStatusPillWrapper: { marginLeft: rs(8) },
+    docStatusPill: {
+      paddingVertical: rs(6),
+      paddingHorizontal: rs(8),
+      borderRadius: rs(12),
+      fontSize: rs(12),
+      fontWeight: "700",
+      color: "#fff",
+    },
+    approvedPill: { backgroundColor: colors.success },
+    rejectedPill: { backgroundColor: colors.error },
+    pendingPill: { backgroundColor: "#ff9800" },
+  });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -228,14 +386,14 @@ export default function ProfileScreen() {
               onPress={() => router.push("/profile/privacy-policy")}
             >
               <Text style={styles.accountActionText}>Privacy Policy</Text>
-              <Ionicons name="chevron-forward" size={18} color="#000" />
+              <Ionicons name="chevron-forward" size={18} color={colors.text} />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.profileItem}
               onPress={() => router.push("/profile/help-support")}
             >
               <Text style={styles.accountActionText}>Help & Support</Text>
-              <Ionicons name="chevron-forward" size={18} color="#000" />
+              <Ionicons name="chevron-forward" size={18} color={colors.text} />
             </TouchableOpacity>
           </View>
         </View>
@@ -248,157 +406,3 @@ export default function ProfileScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8f9fa",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: rs(20),
-    paddingVertical: rs(8),
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  backButton: {
-    width: rs(40),
-    height: rs(40),
-    justifyContent: "center",
-  },
-  backArrow: {
-    fontSize: rs(22),
-    color: "#000",
-  },
-  headerTitle: {
-    fontSize: rs(18),
-    fontWeight: "bold",
-    color: "#000",
-  },
-  editButton: {
-    fontSize: rs(14),
-    color: "#00B624",
-    fontWeight: "600",
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: rs(20),
-    paddingTop: rs(24),
-  },
-  profileHeader: {
-    alignItems: "center",
-    paddingVertical: rs(32),
-  },
-  avatarContainer: {
-    marginBottom: rs(16),
-  },
-  avatar: {
-    width: rs(80),
-    height: rs(80),
-    borderRadius: rs(40),
-  },
-  avatarFallback: {
-    width: rs(80),
-    height: rs(80),
-    borderRadius: rs(40),
-    backgroundColor: "#00B624",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  avatarText: {
-    fontSize: rs(22),
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  userName: {
-    fontSize: rs(22),
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: rs(4),
-  },
-  userEmail: {
-    fontSize: rs(14),
-    color: "#666",
-  },
-  section: {
-    marginBottom: rs(24),
-  },
-  sectionTitle: {
-    fontSize: rs(16),
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: rs(12),
-  },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: rs(12),
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  profileItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: rs(16),
-    paddingVertical: rs(16),
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  profileItemContent: {
-    flex: 1,
-  },
-  profileItemLabel: {
-    fontSize: rs(12),
-    color: "#666",
-    marginBottom: rs(4),
-  },
-  profileItemValue: {
-    fontSize: rs(14),
-    color: "#000",
-    fontWeight: "500",
-  },
-  arrow: {
-    fontSize: rs(16),
-    color: "#ccc",
-  },
-  accountActionText: {
-    fontSize: rs(14),
-    color: "#000",
-    flex: 1,
-  },
-  logoutButton: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#ff4444",
-    borderRadius: rs(12),
-    paddingVertical: rs(16),
-    alignItems: "center",
-    marginBottom: rs(40),
-  },
-  logoutText: {
-    fontSize: rs(14),
-    color: "#ff4444",
-    fontWeight: "600",
-  },
-  docStatusPillWrapper: { marginLeft: rs(8) },
-  docStatusPill: {
-    paddingVertical: rs(6),
-    paddingHorizontal: rs(8),
-    borderRadius: rs(12),
-    fontSize: rs(12),
-    fontWeight: "700",
-    color: "#fff",
-  },
-  approvedPill: { backgroundColor: "#00AA66" },
-  rejectedPill: { backgroundColor: "#d32f2f" },
-  pendingPill: { backgroundColor: "#ff9800" },
-});

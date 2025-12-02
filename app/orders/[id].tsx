@@ -11,23 +11,271 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { orderService, IOrderDetail } from "@/lib/api";
-import { tzColors } from "@/theme/color";
+
+import { useTheme } from "@/context/ThemeContext";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-/**
- * Order detail screen with defensive guards to prevent crashes when nested order fields are missing.
- * - Uses optional chaining and sensible defaults when rendering.
- * - Guards mapping and array operations against undefined.
- */
 
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { colors } = useTheme();
   const [order, setOrder] = useState<IOrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centerContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: colors.background,
+      paddingHorizontal: 40,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingTop: 60,
+      paddingBottom: 16,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      padding: 4,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: 16,
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    orderHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 12,
+    },
+    orderIdLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginBottom: 4,
+    },
+    orderId: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    statusBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      gap: 6,
+    },
+    statusText: {
+      fontSize: 12,
+      fontWeight: "600",
+      textTransform: "uppercase",
+    },
+    divider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: 12,
+    },
+    infoRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    infoLabel: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    infoValue: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.text,
+      textAlign: "right",
+      flex: 1,
+      marginLeft: 16,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.text,
+      marginBottom: 16,
+    },
+    locationItem: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+    },
+    locationIconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.surface,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 12,
+    },
+    locationDetails: {
+      flex: 1,
+    },
+    locationLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginBottom: 4,
+    },
+    locationAddress: {
+      fontSize: 14,
+      color: colors.text,
+      lineHeight: 20,
+    },
+    routeLine: {
+      width: 2,
+      height: 24,
+      backgroundColor: colors.border,
+      marginLeft: 19,
+      marginVertical: 8,
+    },
+    priceRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    priceLabel: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    priceValue: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: colors.text,
+    },
+    totalLabel: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    totalValue: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.primary,
+    },
+    noteText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      lineHeight: 20,
+      fontStyle: "italic",
+    },
+    trackingItem: {
+      flexDirection: "row",
+      marginBottom: 20,
+    },
+    trackingIconContainer: {
+      width: 24,
+      alignItems: "center",
+      marginRight: 12,
+    },
+    trackingDot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      marginTop: 4,
+    },
+    trackingLine: {
+      width: 2,
+      flex: 1,
+      backgroundColor: colors.border,
+      marginTop: 4,
+    },
+    trackingContent: {
+      flex: 1,
+    },
+    trackingHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 4,
+    },
+    trackingStatus: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    trackingTime: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    trackingNote: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginBottom: 4,
+    },
+    trackingDate: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    riderHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 16,
+    },
+    loadingText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginTop: 12,
+    },
+    errorTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.text,
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    errorMessage: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: "center",
+      marginBottom: 24,
+    },
+    retryButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 32,
+      paddingVertical: 12,
+      borderRadius: 8,
+    },
+    retryButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: "#fff",
+    },
+  });
 
   // Prevent screenshots (best-effort)
   useEffect(() => {
@@ -91,16 +339,16 @@ export default function OrderDetailScreen() {
   const getStatusColor = (status?: string) => {
     switch (safeToLower(status)) {
       case "delivered":
-        return "#00B624";
+        return colors.success;
       case "cancelled":
-        return "#FF4C4C";
+        return colors.error;
       case "picked_up":
       case "accepted":
         return "#FFA500";
       case "transit":
         return "#2196F3";
       default:
-        return "#999";
+        return colors.textSecondary;
     }
   };
 
@@ -161,7 +409,7 @@ export default function OrderDetailScreen() {
   if (loading && !order) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={tzColors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading order details...</Text>
       </View>
     );
@@ -170,7 +418,7 @@ export default function OrderDetailScreen() {
   if (error && !order) {
     return (
       <View style={styles.centerContainer}>
-        <Ionicons name="alert-circle" size={64} color="#FF4C4C" />
+        <Ionicons name="alert-circle" size={64} color={colors.error} />
         <Text style={styles.errorTitle}>Oops!</Text>
         <Text style={styles.errorMessage}>{error}</Text>
         <TouchableOpacity
@@ -186,7 +434,11 @@ export default function OrderDetailScreen() {
   if (!order) {
     return (
       <View style={styles.centerContainer}>
-        <Ionicons name="document-outline" size={64} color="#ccc" />
+        <Ionicons
+          name="document-outline"
+          size={64}
+          color={colors.textSecondary}
+        />
         <Text style={styles.errorTitle}>Order Not Found</Text>
       </View>
     );
@@ -217,7 +469,7 @@ export default function OrderDetailScreen() {
             onPress={() => router.back()}
             style={styles.backButton}
           >
-            <Ionicons name="arrow-back" size={24} color="#222" />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Order Details</Text>
           <View style={{ width: 24 }} />
@@ -230,8 +482,8 @@ export default function OrderDetailScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[tzColors.primary]}
-              tintColor={tzColors.primary}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
         >
@@ -306,11 +558,7 @@ export default function OrderDetailScreen() {
 
               <View style={styles.locationItem}>
                 <View style={styles.locationIconContainer}>
-                  <Ionicons
-                    name="navigate"
-                    size={20}
-                    color={tzColors.primary}
-                  />
+                  <Ionicons name="navigate" size={20} color={colors.primary} />
                 </View>
                 <View style={styles.locationDetails}>
                   <Text style={styles.locationLabel}>Pickup Location</Text>
@@ -335,7 +583,9 @@ export default function OrderDetailScreen() {
                             name="flag"
                             size={20}
                             color={
-                              destination?.delivered ? "#00B624" : "#FF4C4C"
+                              destination?.delivered
+                                ? colors.success
+                                : colors.error
                             }
                           />
                         </View>
@@ -355,7 +605,7 @@ export default function OrderDetailScreen() {
                               <Ionicons
                                 name="checkmark-circle"
                                 size={16}
-                                color="#00B624"
+                                color={colors.success}
                               />
                             )}
                           </View>
@@ -367,7 +617,7 @@ export default function OrderDetailScreen() {
                             <Text
                               style={[
                                 styles.locationLabel,
-                                { marginTop: 6, color: "#666" },
+                                { marginTop: 6, color: colors.textSecondary },
                               ]}
                             >
                               {destination.recipient.name ?? "Unknown"} •{" "}
@@ -379,7 +629,7 @@ export default function OrderDetailScreen() {
                             <Text
                               style={[
                                 styles.locationLabel,
-                                { marginTop: 4, color: "#666" },
+                                { marginTop: 4, color: colors.textSecondary },
                               ]}
                             >
                               {destination.distanceFromPickupKm.toFixed(2)} km
@@ -391,7 +641,7 @@ export default function OrderDetailScreen() {
                             <Text
                               style={[
                                 styles.locationLabel,
-                                { marginTop: 4, color: "#00B624" },
+                                { marginTop: 4, color: colors.success },
                               ]}
                             >
                               Delivered on{" "}
@@ -411,7 +661,7 @@ export default function OrderDetailScreen() {
               ) : (
                 <View style={styles.locationItem}>
                   <View style={styles.locationIconContainer}>
-                    <Ionicons name="flag" size={20} color="#FF4C4C" />
+                    <Ionicons name="flag" size={20} color={colors.error} />
                   </View>
                   <View style={styles.locationDetails}>
                     <Text style={styles.locationLabel}>Drop-off Location</Text>
@@ -519,7 +769,7 @@ export default function OrderDetailScreen() {
           {order.riderAssigned && (
             <View style={styles.card}>
               <View style={styles.riderHeader}>
-                <Ionicons name="bicycle" size={24} color={tzColors.primary} />
+                <Ionicons name="bicycle" size={24} color={colors.primary} />
                 <Text style={styles.sectionTitle}>Rider Information</Text>
               </View>
               {completed && (
@@ -537,255 +787,3 @@ export default function OrderDetailScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8f8f8",
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f8f8f8",
-    paddingHorizontal: 40,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 16,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#222",
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-  },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-  },
-  orderHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 12,
-  },
-  orderIdLabel: {
-    fontSize: 12,
-    color: "#777",
-    marginBottom: 4,
-  },
-  orderId: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#222",
-  },
-  statusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: "600",
-    textTransform: "uppercase",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#e0e0e0",
-    marginVertical: 12,
-  },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  infoLabel: {
-    fontSize: 14,
-    color: "#777",
-  },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#222",
-    textAlign: "right",
-    flex: 1,
-    marginLeft: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#222",
-    marginBottom: 16,
-  },
-  locationItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  locationIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#f0f0f0",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  locationDetails: {
-    flex: 1,
-  },
-  locationLabel: {
-    fontSize: 12,
-    color: "#777",
-    marginBottom: 4,
-  },
-  locationAddress: {
-    fontSize: 14,
-    color: "#222",
-    lineHeight: 20,
-  },
-  routeLine: {
-    width: 2,
-    height: 24,
-    backgroundColor: "#e0e0e0",
-    marginLeft: 19,
-    marginVertical: 8,
-  },
-  priceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  priceLabel: {
-    fontSize: 14,
-    color: "#777",
-  },
-  priceValue: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#222",
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#222",
-  },
-  totalValue: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: tzColors.primary,
-  },
-  noteText: {
-    fontSize: 14,
-    color: "#555",
-    lineHeight: 20,
-    fontStyle: "italic",
-  },
-  trackingItem: {
-    flexDirection: "row",
-    marginBottom: 20,
-  },
-  trackingIconContainer: {
-    width: 24,
-    alignItems: "center",
-    marginRight: 12,
-  },
-  trackingDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginTop: 4,
-  },
-  trackingLine: {
-    width: 2,
-    flex: 1,
-    backgroundColor: "#e0e0e0",
-    marginTop: 4,
-  },
-  trackingContent: {
-    flex: 1,
-  },
-  trackingHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  trackingStatus: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#222",
-  },
-  trackingTime: {
-    fontSize: 12,
-    color: "#777",
-  },
-  trackingNote: {
-    fontSize: 13,
-    color: "#555",
-    marginBottom: 4,
-  },
-  trackingDate: {
-    fontSize: 12,
-    color: "#999",
-  },
-  riderHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 16,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: "#777",
-    marginTop: 12,
-  },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#222",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  errorMessage: {
-    fontSize: 14,
-    color: "#777",
-    textAlign: "center",
-    marginBottom: 24,
-  },
-  retryButton: {
-    backgroundColor: tzColors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#fff",
-  },
-});

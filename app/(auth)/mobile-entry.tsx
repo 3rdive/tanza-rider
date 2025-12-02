@@ -1,6 +1,7 @@
 import { authService } from "@/lib/api";
 import { showAlert } from "@/lib/functions";
 import { useAuthFlow } from "@/redux/hooks/hooks";
+import { useTheme } from "@/context/ThemeContext";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -8,7 +9,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StatusBar,
   SafeAreaView,
   StyleSheet,
   KeyboardAvoidingView,
@@ -20,6 +20,7 @@ const SpotifyCreateAccount = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const { setMobile } = useAuthFlow();
   const [loading, setLoading] = useState(false);
+  const { colors } = useTheme();
   const [selectedCountry] = useState({
     code: "+234",
     flag: "🇳🇬",
@@ -52,7 +53,7 @@ const SpotifyCreateAccount = () => {
               text: "Sign In",
               onPress: () => router.push("/(auth)/sign-in"),
             },
-          ]
+          ],
         );
         return;
       }
@@ -89,9 +90,133 @@ const SpotifyCreateAccount = () => {
     router.replace("/(auth)");
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.surface,
+    },
+    keyboardAvoidingView: {
+      flex: 1,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: 24,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingTop: 16,
+      paddingBottom: 24,
+      justifyContent: "space-between",
+    },
+    backButton: {
+      padding: 8,
+      marginLeft: -8,
+    },
+    backIcon: {
+      width: 24,
+      height: 24,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    backIconText: {
+      color: colors.text,
+      fontSize: 24,
+      fontWeight: "300",
+    },
+    headerTitle: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: "600",
+      textAlign: "center",
+    },
+    headerSpacer: {
+      width: 40,
+    },
+    mainContent: {
+      flex: 1,
+      paddingTop: 32,
+    },
+    questionTitle: {
+      color: colors.text,
+      fontSize: 28,
+      fontWeight: "bold",
+      marginBottom: 32,
+      lineHeight: 34,
+    },
+    phoneInputContainer: {
+      flexDirection: "row",
+      marginBottom: 16,
+      backgroundColor: colors.background,
+      borderWidth: 0.8,
+      borderRadius: 8,
+      overflow: "hidden",
+    },
+    countrySelector: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+      minWidth: 100,
+    },
+    countryFlag: {
+      fontSize: 18,
+      marginRight: 8,
+    },
+    countryCode: {
+      color: colors.text,
+      fontSize: 16,
+      marginRight: 8,
+    },
+    dropdownIcon: {
+      color: colors.textSecondary,
+      fontSize: 10,
+    },
+    phoneInput: {
+      flex: 1,
+      backgroundColor: "transparent",
+      color: colors.text,
+      fontSize: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      minHeight: 56,
+    },
+    helperText: {
+      color: colors.textSecondary,
+      fontSize: 14,
+      marginBottom: 48,
+    },
+    nextButton: {
+      paddingVertical: 16,
+      paddingHorizontal: 32,
+      borderRadius: 25,
+      alignSelf: "center",
+      minWidth: 120,
+      alignItems: "center",
+    },
+    nextButtonActive: {
+      backgroundColor: colors.primary,
+    },
+    nextButtonInactive: {
+      opacity: 0.5,
+      backgroundColor: colors.primary,
+    },
+    nextButtonText: {
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    nextButtonTextActive: {
+      color: colors.surface,
+    },
+    nextButtonTextInactive: {
+      color: colors.textSecondary,
+    },
+  });
+
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="black" />
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -126,7 +251,7 @@ const SpotifyCreateAccount = () => {
                 value={phoneNumber}
                 onChangeText={setPhoneNumber}
                 placeholder="9153058596"
-                placeholderTextColor="#666"
+                placeholderTextColor={colors.textSecondary}
                 keyboardType="phone-pad"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -148,7 +273,7 @@ const SpotifyCreateAccount = () => {
               disabled={phoneNumber.length !== 10 || loading}
             >
               {loading ? (
-                <ActivityIndicator color={"black"} size={30} />
+                <ActivityIndicator color={colors.text} size={30} />
               ) : (
                 <Text
                   style={[
@@ -168,131 +293,5 @@ const SpotifyCreateAccount = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "white",
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingTop: 16,
-    paddingBottom: 24,
-    justifyContent: "space-between",
-  },
-  backButton: {
-    padding: 8,
-    marginLeft: -8,
-  },
-  backIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  backIconText: {
-    color: "black",
-    fontSize: 24,
-    fontWeight: "300",
-  },
-  headerTitle: {
-    color: "black",
-    fontSize: 18,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  mainContent: {
-    flex: 1,
-    paddingTop: 32,
-  },
-  questionTitle: {
-    color: "black",
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 32,
-    lineHeight: 34,
-  },
-  phoneInputContainer: {
-    flexDirection: "row",
-    marginBottom: 16,
-    // backgroundColor: '#333',
-    backgroundColor: "#e8e7e7",
-    borderWidth: 0.8,
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  countrySelector: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderRightWidth: 1,
-    borderRightColor: "#555",
-    minWidth: 100,
-  },
-  countryFlag: {
-    fontSize: 18,
-    marginRight: 8,
-  },
-  countryCode: {
-    color: "black",
-    fontSize: 16,
-    marginRight: 8,
-  },
-  dropdownIcon: {
-    color: "#999",
-    fontSize: 10,
-  },
-  phoneInput: {
-    flex: 1,
-    backgroundColor: "transparent",
-    color: "black",
-    fontSize: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    minHeight: 56,
-  },
-  helperText: {
-    color: "#999",
-    fontSize: 14,
-    marginBottom: 48,
-  },
-  nextButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 25,
-    alignSelf: "center",
-    minWidth: 120,
-    alignItems: "center",
-  },
-  nextButtonActive: {
-    backgroundColor: "#1DB954",
-  },
-  nextButtonInactive: {
-    opacity: 0.5,
-    backgroundColor: "#1DB954",
-  },
-  nextButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  nextButtonTextActive: {
-    color: "white",
-  },
-  nextButtonTextInactive: {
-    color: "#666",
-  },
-});
 
 export default SpotifyCreateAccount;

@@ -8,8 +8,10 @@ import { Tabs } from "expo-router";
 import { View } from "react-native";
 import { DeliveryRequestSnackbar } from "@/components";
 import { usePushNotification } from "@/hooks/push-notification.hook";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function TabLayout() {
+  const { colors } = useTheme();
   const { expoPushToken, notification } = usePushNotification();
   const data = JSON.stringify(notification, undefined, 2);
 
@@ -18,7 +20,12 @@ export default function TabLayout() {
   return (
     <View style={{ flex: 1 }}>
       <Tabs
-        screenOptions={{ tabBarActiveTintColor: "#00B624", headerShown: false }}
+        screenOptions={{
+          tabBarActiveTintColor: colors.success,
+          tabBarInactiveTintColor: colors.textSecondary,
+          tabBarStyle: { backgroundColor: colors.surface },
+          headerShown: false,
+        }}
       >
         <Tabs.Screen
           name="index"
@@ -28,7 +35,7 @@ export default function TabLayout() {
               <FontAwesome6
                 name="map-location-dot"
                 size={22}
-                color={focused ? "#00B624" : "black"}
+                color={focused ? colors.success : colors.textSecondary}
               />
             ),
           }}
@@ -41,7 +48,7 @@ export default function TabLayout() {
               <FontAwesome5
                 name="location-arrow"
                 size={22}
-                color={focused ? "#00B624" : "black"}
+                color={focused ? colors.success : colors.textSecondary}
               />
             ),
           }}
@@ -54,7 +61,7 @@ export default function TabLayout() {
               <MaterialIcons
                 name="wallet"
                 size={24}
-                color={focused ? "#00B624" : "black"}
+                color={focused ? colors.success : colors.textSecondary}
               />
             ),
           }}
@@ -67,7 +74,7 @@ export default function TabLayout() {
               <MaterialCommunityIcons
                 name="book-outline"
                 size={22}
-                color={focused ? "#00B624" : "black"}
+                color={focused ? colors.success : colors.textSecondary}
               />
             ),
           }}
@@ -80,7 +87,7 @@ export default function TabLayout() {
               <FontAwesome5
                 name="user-alt"
                 size={22}
-                color={focused ? "#00B624" : "black"}
+                color={focused ? colors.success : colors.textSecondary}
               />
             ),
           }}

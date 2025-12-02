@@ -2,6 +2,7 @@
 import { authService } from "@/lib/api";
 import { DEFAULT_COUNTRY_CODE } from "@/lib/constants";
 import { useAuthFlow } from "@/redux/hooks/hooks";
+import { useTheme } from "@/context/ThemeContext";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -21,12 +22,111 @@ const rs = (n: number) => RFValue((n - 1) * UI_SCALE);
 
 export default function OTPVerificationScreen() {
   const { mobile, clearState, setOtp: setCode } = useAuthFlow();
+  const { colors } = useTheme();
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [timer, setTimer] = useState(60);
   const [error, setError] = useState("");
   const [isExpired, setIsExpired] = useState(false);
   const inputRefs = useRef<any[]>([]);
   const [isLogin, setIsLogin] = useState(false);
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.surface,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: 24,
+      paddingTop: 20,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      justifyContent: "center",
+      marginBottom: 20,
+    },
+    backArrow: {
+      fontSize: rs(24),
+      color: colors.text,
+    },
+    title: {
+      fontSize: rs(28),
+      fontWeight: "bold",
+      color: colors.text,
+      marginBottom: 20,
+      lineHeight: rs(36),
+    },
+    changeNumberButton: {
+      marginBottom: 40,
+    },
+    changeNumberText: {
+      fontSize: rs(16),
+      color: colors.text,
+      textDecorationLine: "underline",
+    },
+    otpContainer: {
+      flexDirection: "row",
+      justifyContent: "flex-start",
+      gap: 10,
+      marginBottom: 30,
+    },
+    otpInput: {
+      width: 60,
+      height: 60,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: 12,
+      fontSize: rs(24),
+      fontWeight: "bold",
+      textAlign: "center",
+      color: colors.text,
+    },
+    otpInputFilled: {
+      borderColor: colors.text,
+      backgroundColor: colors.background,
+    },
+    resendButton: {
+      marginBottom: 40,
+    },
+    resendText: {
+      fontSize: rs(16),
+      color: colors.textSecondary,
+    },
+    disabledButton: {
+      opacity: 0.5,
+    },
+    disabledText: {
+      color: colors.textSecondary,
+    },
+    nextButton: {
+      position: "absolute",
+      bottom: 40,
+      right: 24,
+      backgroundColor: colors.text,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 25,
+    },
+    nextText: {
+      color: colors.surface,
+      fontSize: rs(16),
+      fontWeight: "600",
+    },
+    otpInputError: {
+      borderColor: "#ff4444",
+      backgroundColor: "#fff5f5",
+    },
+    otpTextError: {
+      color: "#ff4444",
+      fontSize: rs(14),
+    },
+    otpInputExpired: {
+      borderColor: colors.border,
+      backgroundColor: colors.background,
+      color: colors.textSecondary,
+    },
+  });
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -117,7 +217,7 @@ export default function OTPVerificationScreen() {
 
   const handleKeyPress = (
     e: NativeSyntheticEvent<TextInputKeyPressEventData>,
-    index: number
+    index: number,
   ) => {
     if (e.nativeEvent.key === "Backspace" && !otp[index] && index > 0) {
       inputRefs.current[index - 1].focus();
@@ -242,100 +342,3 @@ export default function OTPVerificationScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    marginBottom: 20,
-  },
-  backArrow: {
-    fontSize: rs(24),
-    color: "#000",
-  },
-  title: {
-    fontSize: rs(28),
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: 20,
-    lineHeight: rs(36),
-  },
-  changeNumberButton: {
-    marginBottom: 40,
-  },
-  changeNumberText: {
-    fontSize: rs(16),
-    color: "#000",
-    textDecorationLine: "underline",
-  },
-  otpContainer: {
-    flexDirection: "row",
-    justifyContent: "flex-start",
-    gap: 10,
-    marginBottom: 30,
-  },
-  otpInput: {
-    width: 60,
-    height: 60,
-    borderWidth: 2,
-    borderColor: "#e0e0e0",
-    borderRadius: 12,
-    fontSize: rs(24),
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  otpInputFilled: {
-    borderColor: "#000",
-    backgroundColor: "#f9f9f9",
-  },
-  resendButton: {
-    marginBottom: 40,
-  },
-  resendText: {
-    fontSize: rs(16),
-    color: "#666",
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  disabledText: {
-    color: "#ccc",
-  },
-  nextButton: {
-    position: "absolute",
-    bottom: 40,
-    right: 24,
-    backgroundColor: "#000",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 25,
-  },
-  nextText: {
-    color: "#fff",
-    fontSize: rs(16),
-    fontWeight: "600",
-  },
-  otpInputError: {
-    borderColor: "#ff4444",
-    backgroundColor: "#fff5f5",
-  },
-  otpTextError: {
-    color: "#ff4444",
-    fontSize: rs(14),
-  },
-  otpInputExpired: {
-    borderColor: "#ccc",
-    backgroundColor: "#f5f5f5",
-    color: "#999",
-  },
-});

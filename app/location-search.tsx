@@ -1,10 +1,9 @@
-import { locationService, ILocationFeature } from "@/lib/api";
+import { locationService } from "@/lib/api";
 import { setSelectedLocation } from "@/redux/slices/locationSearchSlice";
 import { router, useLocalSearchParams } from "expo-router";
 import React, {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -43,29 +42,61 @@ export default function LocationSearchScreen() {
     try {
       setLoading(true);
       const res = await locationService.search(q.trim());
-      const features = (res?.data || []) as ILocationFeature[];
-      const mapped = features.map((f) => {
-        const p = f.properties || ({} as any);
-        const g = f.geometry || ({} as any);
+      const rawItems = (res?.data || []) as any[];
+
+      const mapped = rawItems.map((item, idx) => {
+        // Case A: API returned normalized GeoJSON-like feature (existing shape)
+        if (item && item.properties && item.geometry) {
+          const p = item.properties || ({} as any);
+          const g = item.geometry || ({} as any);
+          const parts: string[] = [];
+          if (p.street) parts.push(p.street);
+          if (p.city) parts.push(p.city);
+          if (p.state) parts.push(p.state);
+          if (p.country) parts.push(p.country);
+          if (p.postcode) parts.push(p.postcode);
+          const subtitle = parts.filter(Boolean).join(", ");
+          const title = p.name || subtitle || `${p.type || "Location"}`;
+          return {
+            id: `${p.osm_type || ""}_${
+              p.osm_id || Math.random().toString(36).slice(2)
+            }`,
+            title,
+            subtitle,
+            lon: g?.coordinates?.[0],
+            lat: g?.coordinates?.[1],
+          };
+        }
+
+        // Case B: API returned the new flat shape (e.g., { name, description, latitude, longitude, ... })
+        const it = item || {};
         const parts: string[] = [];
-        if (p.street) parts.push(p.street);
-        if (p.city) parts.push(p.city);
-        if (p.state) parts.push(p.state);
-        if (p.country) parts.push(p.country);
-        if (p.postcode) parts.push(p.postcode);
+        if (it.street) parts.push(it.street);
+        if (it.city) parts.push(it.city);
+        if (it.state) parts.push(it.state);
+        if (it.country) parts.push(it.country);
+        if (it.postcode) parts.push(it.postcode);
         const subtitle = parts.filter(Boolean).join(", ");
-        const title = p.name || subtitle || `${p.type || "Location"}`;
+        const title = it.name || it.description || subtitle || "Location";
+
+        const lat =
+          it.latitude ?? it.lat ?? (it.latlng ? it.latlng[0] : undefined);
+        const lon =
+          it.longitude ?? it.lon ?? (it.latlng ? it.latlng[1] : undefined);
+
         return {
-          id: `${p.osm_type || ""}_${
-            p.osm_id || Math.random().toString(36).slice(2)
-          }`,
+          id: `${it.name || ""}_${it.latitude ?? it.lat ?? idx}_${Math.random()
+            .toString(36)
+            .slice(2)}`,
           title,
           subtitle,
-          lon: g?.coordinates?.[0],
-          lat: g?.coordinates?.[1],
+          lon,
+          lat,
         };
       });
+
       setResults(mapped);
+    // eslint-disable-next-line  @typescript-eslint/no-unused-vars
     } catch (_e) {
       setResults([]);
     } finally {
@@ -77,6 +108,7 @@ export default function LocationSearchScreen() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => runSearch(query), 350);
     return () => clearTimeout(debounceRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
   const handleSelect = (item: {
@@ -92,7 +124,7 @@ export default function LocationSearchScreen() {
         lat: item.lat,
         lon: item.lon,
         context: String(context || ""),
-      })
+      }),
     );
     router.back();
   };

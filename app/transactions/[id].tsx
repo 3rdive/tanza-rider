@@ -12,11 +12,13 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { transactionService, ITransactionDetail } from "../../lib/api";
+import { useTheme } from "../../context/ThemeContext";
 
 const TransactionDetailScreen: React.FC = () => {
+  const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [transaction, setTransaction] = useState<ITransactionDetail | null>(
-    null
+    null,
   );
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +43,7 @@ const TransactionDetailScreen: React.FC = () => {
     } catch (err: any) {
       console.error("Error fetching transaction details:", err);
       setError(
-        err?.response?.data?.message || "Failed to load transaction details"
+        err?.response?.data?.message || "Failed to load transaction details",
       );
     } finally {
       setIsLoading(false);
@@ -128,18 +130,201 @@ const TransactionDetailScreen: React.FC = () => {
     })}`;
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 40,
+    },
+    loadingText: {
+      marginTop: 16,
+      fontSize: 16,
+      color: colors.textSecondary,
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 40,
+    },
+    errorTitle: {
+      fontSize: 20,
+      fontWeight: "600",
+      color: colors.text,
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    errorMessage: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: "center",
+      marginBottom: 24,
+    },
+    retryButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.success,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 8,
+      gap: 8,
+    },
+    retryButtonText: {
+      color: colors.background,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    statusCard: {
+      backgroundColor: colors.surface,
+      margin: 20,
+      padding: 32,
+      borderRadius: 16,
+      alignItems: "center",
+    },
+    iconContainer: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 16,
+    },
+    amountText: {
+      fontSize: 36,
+      fontWeight: "bold",
+      color: colors.text,
+      marginBottom: 8,
+    },
+    typeText: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      marginBottom: 12,
+    },
+    statusBadge: {
+      paddingHorizontal: 16,
+      paddingVertical: 6,
+      borderRadius: 20,
+    },
+    statusText: {
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    section: {
+      backgroundColor: colors.surface,
+      marginHorizontal: 20,
+      marginBottom: 16,
+      padding: 20,
+      borderRadius: 12,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.text,
+      marginBottom: 16,
+    },
+    infoRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    infoLabel: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      flex: 1,
+    },
+    infoValue: {
+      fontSize: 14,
+      color: colors.text,
+      fontWeight: "500",
+      flex: 1,
+      textAlign: "right",
+    },
+    descriptionText: {
+      flex: 2,
+    },
+    amountValue: {
+      color: colors.success,
+      fontWeight: "600",
+    },
+    capitalizeText: {
+      textTransform: "capitalize",
+    },
+    totalRow: {
+      borderBottomWidth: 0,
+      paddingTop: 16,
+      marginTop: 8,
+      borderTopWidth: 2,
+      borderTopColor: colors.border,
+    },
+    totalLabel: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    totalValue: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.success,
+    },
+    helpSection: {
+      marginHorizontal: 20,
+      marginBottom: 32,
+    },
+    helpButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.surface,
+      padding: 16,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 8,
+    },
+    helpButtonText: {
+      fontSize: 14,
+      color: colors.success,
+      fontWeight: "600",
+    },
+  });
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Transaction Details</Text>
           <View style={{ width: 24 }} />
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#00B624" />
+          <ActivityIndicator size="large" color={colors.success} />
           <Text style={styles.loadingText}>Loading transaction details...</Text>
         </View>
       </SafeAreaView>
@@ -151,13 +336,13 @@ const TransactionDetailScreen: React.FC = () => {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Transaction Details</Text>
           <View style={{ width: 24 }} />
         </View>
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={64} color="#ef4444" />
+          <Ionicons name="alert-circle" size={64} color={colors.error} />
           <Text style={styles.errorTitle}>Failed to Load</Text>
           <Text style={styles.errorMessage}>
             {error || "Transaction not found"}
@@ -166,7 +351,7 @@ const TransactionDetailScreen: React.FC = () => {
             style={styles.retryButton}
             onPress={fetchTransactionDetail}
           >
-            <Ionicons name="refresh" size={20} color="#fff" />
+            <Ionicons name="refresh" size={20} color={colors.background} />
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -178,7 +363,7 @@ const TransactionDetailScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Transaction Details</Text>
         <View style={{ width: 24 }} />
@@ -343,11 +528,15 @@ const TransactionDetailScreen: React.FC = () => {
                     text: "Contact Support",
                     onPress: () => router.push("/profile/help-support"),
                   },
-                ]
+                ],
               );
             }}
           >
-            <Ionicons name="help-circle-outline" size={20} color="#00B624" />
+            <Ionicons
+              name="help-circle-outline"
+              size={20}
+              color={colors.success}
+            />
             <Text style={styles.helpButtonText}>
               Need help with this transaction?
             </Text>
@@ -357,188 +546,5 @@ const TransactionDetailScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000",
-  },
-  scrollView: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: "#64748b",
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-  },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#000",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  errorMessage: {
-    fontSize: 14,
-    color: "#64748b",
-    textAlign: "center",
-    marginBottom: 24,
-  },
-  retryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#00B624",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  retryButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  statusCard: {
-    backgroundColor: "#fff",
-    margin: 20,
-    padding: 32,
-    borderRadius: 16,
-    alignItems: "center",
-  },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  amountText: {
-    fontSize: 36,
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: 8,
-  },
-  typeText: {
-    fontSize: 16,
-    color: "#64748b",
-    marginBottom: 12,
-  },
-  statusBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  section: {
-    backgroundColor: "#fff",
-    marginHorizontal: 20,
-    marginBottom: 16,
-    padding: 20,
-    borderRadius: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000",
-    marginBottom: 16,
-  },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-  },
-  infoLabel: {
-    fontSize: 14,
-    color: "#64748b",
-    flex: 1,
-  },
-  infoValue: {
-    fontSize: 14,
-    color: "#000",
-    fontWeight: "500",
-    flex: 1,
-    textAlign: "right",
-  },
-  descriptionText: {
-    flex: 2,
-  },
-  amountValue: {
-    color: "#00B624",
-    fontWeight: "600",
-  },
-  capitalizeText: {
-    textTransform: "capitalize",
-  },
-  totalRow: {
-    borderBottomWidth: 0,
-    paddingTop: 16,
-    marginTop: 8,
-    borderTopWidth: 2,
-    borderTopColor: "#f1f5f9",
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
-  },
-  totalValue: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#00B624",
-  },
-  helpSection: {
-    marginHorizontal: 20,
-    marginBottom: 32,
-  },
-  helpButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    gap: 8,
-  },
-  helpButtonText: {
-    fontSize: 14,
-    color: "#00B624",
-    fontWeight: "600",
-  },
-});
 
 export default TransactionDetailScreen;

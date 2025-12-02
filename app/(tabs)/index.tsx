@@ -11,6 +11,7 @@ import {
   RefreshControl,
   Dimensions,
 } from "react-native";
+// import { StatusBar } from 'expo-status-bar';
 import { LeafletView } from "react-native-leaflet-view";
 import * as Haptics from "expo-haptics";
 import ReviewBottomSheet from "../../components/review-bottom-sheet";
@@ -30,8 +31,10 @@ import {
 import { useDeviceLocation } from "@/hooks/location.hook";
 import { useTasks } from "@/hooks/useTasks";
 import { useUser } from "@/redux/hooks/hooks";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function HomeScreen() {
+  const { colors } = useTheme();
   const [status, setStatus] = useState<OrderTrackingStatus>("accepted");
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -47,11 +50,11 @@ export default function HomeScreen() {
   // Fade background and border to transparent so white rectangle disappears
   const headerBgColor = headerAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ["rgba(255,255,255,1)", "rgba(255,255,255,0)"],
+    outputRange: [colors.background, "transparent"],
   });
   const headerBorderColor = headerAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ["rgba(240,240,240,1)", "rgba(240,240,240,0)"],
+    outputRange: [colors.border, "transparent"],
   });
 
   const { isActive, setActive } = useRiderActiveStatus();
@@ -85,7 +88,7 @@ export default function HomeScreen() {
     if (tasks.length > 0) {
       // Find the first review_request task
       const reviewTask = tasks.find(
-        (task) => task.category === "request_review",
+        (task) => task.category === "request_review"
       );
 
       if (reviewTask) {
@@ -142,7 +145,7 @@ export default function HomeScreen() {
       console.error("Error submitting review:", error);
       Alert.alert(
         "Error",
-        error?.message || "Failed to submit review. Please try again.",
+        error?.message || "Failed to submit review. Please try again."
       );
     }
   };
@@ -165,7 +168,7 @@ export default function HomeScreen() {
       setCurrentReviewTask(null);
       try {
         await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Warning,
+          Haptics.NotificationFeedbackType.Warning
         );
       } catch {}
     }
@@ -183,7 +186,7 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       refetchOrders();
-    }, [refetchOrders]),
+    }, [refetchOrders])
   );
 
   const statuses = [
@@ -224,18 +227,18 @@ export default function HomeScreen() {
 
         // Vibrate on success
         await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success,
+          Haptics.NotificationFeedbackType.Success
         );
 
         Alert.alert(
           "Success",
-          `Order status updated to ${newStatus.replace("_", " ")}`,
+          `Order status updated to ${newStatus.replace("_", " ")}`
         );
       } catch (error: any) {
         console.error("Error updating order status:", error);
         Alert.alert(
           "Error",
-          error?.response?.data?.message || "Failed to update order status",
+          error?.response?.data?.message || "Failed to update order status"
         );
       } finally {
         setUpdatingStatus(false);
@@ -266,7 +269,7 @@ export default function HomeScreen() {
             lng: parseFloat(currentActiveOrder.pickUpLocation.longitude),
           }
         : { lat: 37.78825, lng: -122.4324 },
-    [currentActiveOrder],
+    [currentActiveOrder]
   );
 
   const dropoffCoords = React.useMemo(
@@ -277,7 +280,7 @@ export default function HomeScreen() {
             lng: parseFloat(currentActiveOrder.dropOffLocation.longitude),
           }
         : { lat: 37.75825, lng: -122.4524 },
-    [currentActiveOrder],
+    [currentActiveOrder]
   );
 
   // Get all delivery destination coordinates for multi-delivery orders
@@ -440,15 +443,77 @@ export default function HomeScreen() {
             duration: 1000,
             useNativeDriver: true,
           }),
-        ]),
+        ])
       );
       pulse.start();
       return () => pulse.stop();
     }
   }, [currentActiveOrder, latitude, longitude, pulseAnim]);
 
+  const styles = StyleSheet.create({
+    container: { flex: 1 },
+    header: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingTop: 50,
+      paddingBottom: 15,
+      backgroundColor: colors.background,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      zIndex: 10,
+    },
+    headerLeft: {
+      flex: 1,
+    },
+    greeting: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginBottom: 2,
+    },
+    riderName: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    headerRight: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    statusText: {
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    sheet: {
+      position: "absolute",
+      bottom: 0,
+      width: "100%",
+      backgroundColor: colors.background,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      padding: 16,
+      elevation: 10,
+      maxHeight: "65%",
+    },
+    sheetHandle: {
+      width: 50,
+      height: 5,
+      borderRadius: 3,
+      backgroundColor: colors.border,
+      alignSelf: "center",
+      marginBottom: 10,
+    },
+  });
+
   return (
     <View style={styles.container}>
+      {/*<StatusBar style="light" animated />*/}
       {/* Header */}
       <Animated.View
         style={[
@@ -471,7 +536,7 @@ export default function HomeScreen() {
           <Text
             style={[
               styles.statusText,
-              { color: isActive ? "#00AA66" : "#999" },
+              { color: isActive ? colors.success : colors.textSecondary },
             ]}
           >
             {isActive ? "Active" : "Inactive"}
@@ -479,9 +544,7 @@ export default function HomeScreen() {
           <Switch
             value={isActive}
             onValueChange={handleToggleOnline}
-            trackColor={{ false: "#E5E5E5", true: "#C8E6C9" }}
-            thumbColor={isActive ? "#00AA66" : "#f4f3f4"}
-            ios_backgroundColor="#E5E5E5"
+            ios_backgroundColor={colors.border}
           />
         </View>
       </Animated.View>
@@ -537,68 +600,3 @@ export default function HomeScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-
-  // Header styles
-  header: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 15,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-    zIndex: 10,
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  greeting: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 2,
-  },
-  riderName: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#333",
-  },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  sheet: {
-    position: "absolute",
-    bottom: 0,
-    width: "100%",
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 16,
-    elevation: 10,
-    maxHeight: "65%",
-  },
-  sheetHandle: {
-    width: 50,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: "#ccc",
-    alignSelf: "center",
-    marginBottom: 10,
-  },
-  // extraneous styles moved into extracted components
-});

@@ -1,5 +1,6 @@
 import { StorageKeys, StorageMechanics } from "@/lib/storage-mechanics";
 import { useUser } from "@/redux/hooks/hooks";
+import { useTheme } from "@/context/ThemeContext";
 import {
   Poppins_100Thin,
   Poppins_200ExtraLight,
@@ -33,6 +34,7 @@ export default function AnimatedSplashScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const { isAuthenticated } = useUser();
+  const { colors } = useTheme();
 
   const [fontsLoaded] = useFonts({
     Poppins_100Thin,
@@ -44,6 +46,61 @@ export default function AnimatedSplashScreen() {
     Poppins_700Bold_Italic,
     Poppins_800ExtraBold,
   });
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.primary,
+    },
+    progressContainer: {
+      height: 3,
+      backgroundColor: "rgba(0, 0, 0, 0.3)",
+      width: "100%",
+    },
+    progressBar: {
+      height: "100%",
+      backgroundColor: colors.text,
+      borderRadius: 1.5,
+    },
+    content: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    brandText: {
+      fontSize: rs(80),
+      fontWeight: "bold",
+      color: colors.surface,
+      letterSpacing: -2,
+      marginBottom: 2,
+    },
+    tagline: {
+      fontSize: rs(16),
+      color: colors.text,
+      fontWeight: "500",
+      letterSpacing: 0.5,
+      wordWrap: "nowrap",
+    },
+  });
+
+  const handleAuthenticate = async () => {
+    const hasOnboarded = await StorageMechanics.get(
+      StorageKeys.HAS_ONBOARDING_COMPLETED,
+    );
+    if (!fontsLoaded) return;
+    StatusBar.setHidden(false, "fade");
+
+    // router.replace("/(tabs)");
+    if (isAuthenticated) {
+      router.replace("/(tabs)");
+    } else {
+      if (hasOnboarded) {
+        router.replace("/(auth)/sign-in");
+      } else {
+        router.replace("/(auth)");
+      }
+    }
+  };
 
   useEffect(() => {
     // Start animations
@@ -68,6 +125,7 @@ export default function AnimatedSplashScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -75,29 +133,9 @@ export default function AnimatedSplashScreen() {
     const timer = setTimeout(() => {
       handleAuthenticate();
     }, 2500);
-
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fontsLoaded]);
-
-  const handleAuthenticate = async () => {
-    const hasOnboarded = await StorageMechanics.get(
-      StorageKeys.HAS_ONBOARDING_COMPLETED
-    );
-    if (!fontsLoaded) return;
-	 StatusBar.setHidden(false, "fade");
-
-
-	 // router.replace("/(tabs)");
-    if (isAuthenticated) {
-      router.replace("/(tabs)");
-    } else {
-      if (hasOnboarded) {
-        router.replace("/(auth)/sign-in");
-      } else {
-        router.replace("/(auth)");
-      }
-    }
-  };
 
   const progressWidth = progressAnim.interpolate({
     inputRange: [0, 1],
@@ -139,39 +177,3 @@ export default function AnimatedSplashScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#00B624",
-  },
-  progressContainer: {
-    height: 3,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    width: "100%",
-  },
-  progressBar: {
-    height: "100%",
-    backgroundColor: "#ffffff",
-    borderRadius: 1.5,
-  },
-  content: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  brandText: {
-    fontSize: rs(80),
-    fontWeight: "bold",
-    color: "#000000",
-    letterSpacing: -2,
-    marginBottom: 2,
-  },
-  tagline: {
-    fontSize: rs(16),
-    color: "#ffffff",
-    fontWeight: "500",
-    letterSpacing: 0.5,
-    wordWrap: "nowrap",
-  },
-});

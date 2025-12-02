@@ -11,14 +11,17 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Platform,
 } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize";
+import { showPermissionAlert } from "@/lib/functions";
 import { userService, storageService } from "@/lib/api";
 import { useUser, useAppDispatch, useAppSelector } from "@/redux/hooks/hooks";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
 import { useIsFocused } from "@react-navigation/native";
 import { clearSelectedLocation } from "@/redux/slices/locationSearchSlice";
+import { useTheme } from "@/context/ThemeContext";
 
 const UI_SCALE = 0.82; // downscale globally
 const rs = (n: number) => RFValue((n - 2) * UI_SCALE);
@@ -36,6 +39,7 @@ interface FormErrors {
 }
 
 export default function EditProfileScreen(): JSX.Element {
+  const { colors } = useTheme();
   const { user, access_token, setUser } = useUser();
   const initialFirst = (user as any)?.firstName || "";
   const initialLast = (user as any)?.lastName || "";
@@ -52,7 +56,7 @@ export default function EditProfileScreen(): JSX.Element {
 
   const initialUsersAddress = (user as any)?.usersAddress || null;
   const [addressText, setAddressText] = useState<string>(
-    initialUsersAddress?.name || ""
+    initialUsersAddress?.name || "",
   );
   const [addressCoords, setAddressCoords] = useState<{
     lat: number;
@@ -62,13 +66,13 @@ export default function EditProfileScreen(): JSX.Element {
       typeof initialUsersAddress.lat === "number" &&
       typeof initialUsersAddress.lon === "number"
       ? { lat: initialUsersAddress.lat, lon: initialUsersAddress.lon }
-      : null
+      : null,
   );
 
   const dispatch = useAppDispatch();
   const isFocused = useIsFocused();
   const selected = useAppSelector(
-    (s) => (s as any).locationSearch?.selected || null
+    (s) => (s as any).locationSearch?.selected || null,
   );
 
   useEffect(() => {
@@ -218,7 +222,7 @@ export default function EditProfileScreen(): JSX.Element {
 
   const updateFormData = (
     field: keyof EditProfileFormData,
-    value: string
+    value: string,
   ): void => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
@@ -226,6 +230,182 @@ export default function EditProfileScreen(): JSX.Element {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: rs(20),
+      paddingVertical: rs(16),
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      width: rs(40),
+      height: rs(40),
+      justifyContent: "center",
+    },
+    backArrow: {
+      fontSize: rs(24),
+      color: colors.text,
+    },
+    headerTitle: {
+      fontSize: rs(20),
+      fontWeight: "bold",
+      color: colors.text,
+    },
+    saveButton: {
+      paddingHorizontal: rs(16),
+      paddingVertical: rs(8),
+    },
+    saveButtonText: {
+      fontSize: rs(16),
+      color: colors.success,
+      fontWeight: "600",
+    },
+    disabledButton: {
+      opacity: 0.5,
+    },
+    disabledText: {
+      color: colors.textSecondary,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: rs(20),
+      paddingTop: rs(24),
+    },
+    profilePictureSection: {
+      alignItems: "center",
+      paddingVertical: rs(32),
+      marginBottom: rs(24),
+    },
+    avatarContainer: {
+      marginBottom: rs(16),
+    },
+    avatarFallback: {
+      width: rs(80),
+      height: rs(80),
+      borderRadius: rs(40),
+      backgroundColor: colors.success,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    avatarText: {
+      fontSize: rs(24),
+      fontWeight: "bold",
+      color: colors.background,
+    },
+    changePhotoButton: {
+      paddingHorizontal: rs(20),
+      paddingVertical: rs(8),
+      borderRadius: rs(20),
+      borderWidth: 1,
+      borderColor: colors.success,
+    },
+    changePhotoText: {
+      fontSize: rs(14),
+      color: colors.success,
+      fontWeight: "500",
+    },
+    formSection: {
+      backgroundColor: colors.surface,
+      borderRadius: rs(12),
+      padding: rs(20),
+      marginBottom: rs(24),
+      shadowColor: "#000",
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    inputContainer: {
+      marginBottom: rs(20),
+    },
+    label: {
+      fontSize: rs(16),
+      color: colors.text,
+      marginBottom: rs(8),
+      fontWeight: "500",
+    },
+    input: {
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: rs(12),
+      paddingHorizontal: 16,
+      paddingVertical: rs(16),
+      fontSize: rs(16),
+      backgroundColor: colors.surface,
+      color: colors.text,
+    },
+    errorInput: {
+      borderColor: colors.error,
+    },
+    errorText: {
+      fontSize: rs(14),
+      color: colors.error,
+      marginTop: rs(4),
+    },
+    infoSection: {
+      backgroundColor: colors.surface,
+      borderRadius: rs(12),
+      padding: rs(20),
+      marginBottom: rs(40),
+      shadowColor: "#000",
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    infoText: {
+      fontSize: rs(14),
+      color: colors.textSecondary,
+      lineHeight: rs(20),
+      textAlign: "center",
+    },
+    useLocationBtn: {
+      marginTop: 8,
+      alignSelf: "flex-start",
+      backgroundColor: colors.surface,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    useLocationBtnText: {
+      color: colors.success,
+      fontWeight: "600",
+    },
+    inputWrapper: {
+      position: "relative",
+    },
+    clearBtn: {
+      position: "absolute",
+      right: 12,
+      top: 0,
+      bottom: 0,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 6,
+    },
+    clearBtnText: {
+      fontSize: rs(18),
+      color: colors.textSecondary,
+      fontWeight: "600",
+    },
+  });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -276,28 +456,63 @@ export default function EditProfileScreen(): JSX.Element {
             disabled={isLoading}
             onPress={async () => {
               try {
-                const perm =
-                  await ImagePicker.requestMediaLibraryPermissionsAsync();
-                if (perm.status !== "granted") {
-                  Alert.alert(
-                    "Permission needed",
-                    "We need access to your photos to change your profile picture."
-                  );
-                  return;
+                // On web, permissions are typically not required in the same way,
+                // so skip explicit permission checks there.
+                if (Platform.OS !== "web") {
+                  // Check current permission first to avoid repeatedly prompting the user
+                  const current =
+                    await ImagePicker.getMediaLibraryPermissionsAsync();
+                  const currentGranted =
+                    typeof (current as any)?.granted === "boolean"
+                      ? (current as any).granted
+                      : (current as any)?.status === "granted";
+
+                  if (!currentGranted) {
+                    // Request permission
+                    const request =
+                      await ImagePicker.requestMediaLibraryPermissionsAsync();
+                    const granted =
+                      typeof (request as any)?.granted === "boolean"
+                        ? (request as any).granted
+                        : (request as any)?.status === "granted";
+
+                    if (!granted) {
+                      // Inform user and offer to open settings
+                      showPermissionAlert(
+                        "Permission needed",
+                        "We need access to your photos to change your profile picture.",
+                        "photos",
+                      );
+                      return;
+                    }
+                  }
                 }
+
                 const result = await ImagePicker.launchImageLibraryAsync({
                   mediaTypes: ImagePicker.MediaTypeOptions.Images,
                   allowsEditing: true,
                   aspect: [1, 1],
                   quality: 0.8,
                 });
-                if (result.canceled) return;
-                const uri = result.assets?.[0]?.uri;
+
+                // Support both `canceled` and older `cancelled` flags
+                const wasCancelled =
+                  (result as any).canceled ??
+                  (result as any).cancelled ??
+                  false;
+                if (wasCancelled) return;
+
+                // Support both new assets array and older uri field
+                const uri =
+                  (result as any).assets?.[0]?.uri ?? (result as any).uri;
                 if (!uri) return;
+
+                // Upload image and update profile
                 const resp = await storageService.upload({
                   uri,
                   type: "image/jpeg",
                 });
+
                 if (resp?.success) {
                   const url = (resp.data as any)?.url as string;
                   if (url) {
@@ -312,14 +527,14 @@ export default function EditProfileScreen(): JSX.Element {
                     } else {
                       Alert.alert(
                         "Update failed",
-                        update?.message || "Unable to update profile photo"
+                        update?.message || "Unable to update profile photo",
                       );
                     }
                   }
                 } else {
                   Alert.alert(
                     "Upload failed",
-                    resp?.message || "Unable to upload image"
+                    resp?.message || "Unable to upload image",
                   );
                 }
               } catch (e: any) {
@@ -327,7 +542,7 @@ export default function EditProfileScreen(): JSX.Element {
                   "Error",
                   e?.response?.data?.message ||
                     e?.message ||
-                    "Unable to change photo"
+                    "Unable to change photo",
                 );
               }
             }}
@@ -398,178 +613,3 @@ export default function EditProfileScreen(): JSX.Element {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8f9fa",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: rs(20),
-    paddingVertical: rs(16),
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  backButton: {
-    width: rs(40),
-    height: rs(40),
-    justifyContent: "center",
-  },
-  backArrow: {
-    fontSize: rs(24),
-    color: "#000",
-  },
-  headerTitle: {
-    fontSize: rs(20),
-    fontWeight: "bold",
-    color: "#000",
-  },
-  saveButton: {
-    paddingHorizontal: rs(16),
-    paddingVertical: rs(8),
-  },
-  saveButtonText: {
-    fontSize: rs(16),
-    color: "#00B624",
-    fontWeight: "600",
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  disabledText: {
-    color: "#999",
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: rs(20),
-    paddingTop: rs(24),
-  },
-  profilePictureSection: {
-    alignItems: "center",
-    paddingVertical: rs(32),
-    marginBottom: rs(24),
-  },
-  avatarContainer: {
-    marginBottom: rs(16),
-  },
-  avatarFallback: {
-    width: rs(80),
-    height: rs(80),
-    borderRadius: rs(40),
-    backgroundColor: "#00B624",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  avatarText: {
-    fontSize: rs(24),
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  changePhotoButton: {
-    paddingHorizontal: rs(20),
-    paddingVertical: rs(8),
-    borderRadius: rs(20),
-    borderWidth: 1,
-    borderColor: "#00B624",
-  },
-  changePhotoText: {
-    fontSize: rs(14),
-    color: "#00B624",
-    fontWeight: "500",
-  },
-  formSection: {
-    backgroundColor: "#fff",
-    borderRadius: rs(12),
-    padding: rs(20),
-    marginBottom: rs(24),
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  inputContainer: {
-    marginBottom: rs(20),
-  },
-  label: {
-    fontSize: rs(16),
-    color: "#000",
-    marginBottom: rs(8),
-    fontWeight: "500",
-  },
-  input: {
-    borderWidth: 2,
-    borderColor: "#e0e0e0",
-    borderRadius: rs(12),
-    paddingHorizontal: 16,
-    paddingVertical: rs(16),
-    fontSize: rs(16),
-    backgroundColor: "#fff",
-  },
-  errorInput: {
-    borderColor: "#ff4444",
-  },
-  errorText: {
-    fontSize: rs(14),
-    color: "#ff4444",
-    marginTop: rs(4),
-  },
-  infoSection: {
-    backgroundColor: "#fff",
-    borderRadius: rs(12),
-    padding: rs(20),
-    marginBottom: rs(40),
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  infoText: {
-    fontSize: rs(14),
-    color: "#666",
-    lineHeight: rs(20),
-    textAlign: "center",
-  },
-  useLocationBtn: {
-    marginTop: 8,
-    alignSelf: "flex-start",
-    backgroundColor: "#f0f9f1",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: "#d6f5db",
-  },
-  useLocationBtnText: {
-    color: "#00B624",
-    fontWeight: "600",
-  },
-  inputWrapper: {
-    position: "relative",
-  },
-  clearBtn: {
-    position: "absolute",
-    right: 12,
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 6,
-  },
-  clearBtnText: {
-    fontSize: rs(18),
-    color: "#999",
-    fontWeight: "600",
-  },
-});

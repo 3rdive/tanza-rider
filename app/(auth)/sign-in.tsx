@@ -2,6 +2,7 @@
 import { authService } from "@/lib/api";
 import { DEFAULT_COUNTRY_CODE } from "@/lib/constants";
 import { useUser } from "@/redux/hooks/hooks";
+import { useTheme } from "@/context/ThemeContext";
 import { router } from "expo-router";
 import React, { useRef, useState } from "react";
 import { showAlert } from "@/lib/functions";
@@ -28,6 +29,187 @@ export default function SignInScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const { setUser } = useUser();
+  const { colors } = useTheme();
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.surface,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: rs(24),
+      paddingTop: rs(20),
+    },
+    backButton: {
+      width: rs(40),
+      height: rs(40),
+      justifyContent: "center",
+      marginBottom: rs(20),
+    },
+    backArrow: {
+      fontSize: rs(24),
+      color: colors.text,
+    },
+    header: {
+      marginBottom: rs(40),
+    },
+    title: {
+      fontSize: rs(32),
+      fontWeight: "bold",
+      color: colors.text,
+      marginBottom: rs(8),
+    },
+    subtitle: {
+      fontSize: rs(16),
+      color: colors.textSecondary,
+      lineHeight: rs(22),
+    },
+    formContainer: {},
+    inputContainer: {
+      marginBottom: rs(24),
+    },
+    label: {
+      fontSize: rs(16),
+      color: colors.text,
+      marginBottom: rs(8),
+      fontWeight: "500",
+    },
+    input: {
+      color: colors.text,
+      borderWidth: rs(2),
+      borderColor: colors.border,
+      borderRadius: rs(12),
+      paddingHorizontal: rs(14),
+      paddingVertical: rs(14),
+      fontSize: rs(16),
+      backgroundColor: colors.surface,
+    },
+    inputDisabled: {
+      backgroundColor: colors.background,
+      borderColor: colors.border,
+      color: colors.textSecondary,
+    },
+    loadingContainer: {
+      alignItems: "center",
+      paddingVertical: rs(40),
+    },
+    loadingText: {
+      fontSize: rs(16),
+      color: colors.textSecondary,
+      marginTop: rs(16),
+    },
+    continueButton: {
+      backgroundColor: colors.text,
+      paddingVertical: rs(16),
+      borderRadius: rs(12),
+      alignItems: "center",
+      marginBottom: rs(30),
+    },
+    disabledButton: {
+      backgroundColor: colors.border,
+    },
+    continueText: {
+      color: colors.surface,
+      fontSize: rs(18),
+      fontWeight: "600",
+    },
+    disabledText: {
+      color: colors.textSecondary,
+    },
+    toggleRow: {
+      flexDirection: "row",
+      backgroundColor: colors.background,
+      padding: rs(4),
+      borderRadius: rs(10),
+      marginBottom: rs(16),
+    },
+    toggleButton: {
+      flex: 1,
+      paddingVertical: rs(10),
+      alignItems: "center",
+      borderRadius: 8,
+    },
+    toggleButtonActive: {
+      backgroundColor: colors.surface,
+      shadowColor: "#000",
+      shadowOpacity: 0.05,
+      shadowRadius: rs(4),
+      elevation: 1,
+    },
+    toggleText: {
+      color: colors.textSecondary,
+      fontWeight: "500",
+    },
+    toggleTextActive: {
+      color: colors.text,
+      fontWeight: "600",
+    },
+
+    alternativeContainer: {
+      marginBottom: rs(40),
+    },
+    divider: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: rs(24),
+    },
+    line: {
+      flex: 1,
+      height: rs(1),
+      backgroundColor: colors.border,
+    },
+    orText: {
+      marginHorizontal: rs(16),
+      color: colors.textSecondary,
+      fontSize: rs(16),
+    },
+    createAccountButton: {
+      alignItems: "center",
+      paddingVertical: rs(12),
+    },
+    createAccountText: {
+      fontSize: rs(16),
+      color: colors.text,
+      fontWeight: "500",
+    },
+    forgotPasswordButton: {
+      alignItems: "center",
+      paddingVertical: rs(12),
+      marginBottom: rs(40),
+    },
+    forgotPasswordText: {
+      fontSize: rs(16),
+      color: colors.text,
+      fontWeight: "500",
+    },
+    phoneContainer: {
+      flexDirection: "row",
+      // marginBottom: 30,
+    },
+    countrySelector: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.background,
+      paddingHorizontal: rs(16),
+      paddingVertical: rs(16),
+      borderRadius: rs(12),
+      marginRight: rs(12),
+    },
+    flag: {
+      fontSize: rs(20),
+      marginRight: rs(8),
+    },
+    countryCode: {
+      fontSize: rs(16),
+      color: colors.text,
+      marginRight: rs(8),
+    },
+    dropdown: {
+      fontSize: rs(12),
+      color: colors.textSecondary,
+    },
+  });
 
   // Only validate mobile
   const validateMobile = (value: string) => {
@@ -63,7 +245,7 @@ export default function SignInScreen() {
         } else {
           showAlert(
             "Account not found",
-            `No account found for the provided mobile number.`
+            `No account found for the provided mobile number.`,
           );
         }
       } catch (e: any) {
@@ -143,7 +325,7 @@ export default function SignInScreen() {
             <View style={styles.inputContainer}>
               <Text style={styles.label}>
                 Mobile number
-                <Text style={{ color: "#999", fontSize: 12 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
                   (include country code)
                 </Text>
               </Text>
@@ -211,7 +393,7 @@ export default function SignInScreen() {
             {/* Loading State */}
             {isLoading && (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#000" />
+                <ActivityIndicator size="large" color={colors.text} />
                 <Text style={styles.loadingText}>
                   {!showPassword
                     ? "Checking your account..."
@@ -280,182 +462,3 @@ export default function SignInScreen() {
     </SafeAreaView>
   );
 }
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: rs(24),
-    paddingTop: rs(20),
-  },
-  backButton: {
-    width: rs(40),
-    height: rs(40),
-    justifyContent: "center",
-    marginBottom: rs(20),
-  },
-  backArrow: {
-    fontSize: rs(24),
-    color: "#000",
-  },
-  header: {
-    marginBottom: rs(40),
-  },
-  title: {
-    fontSize: rs(32),
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: rs(8),
-  },
-  subtitle: {
-    fontSize: rs(16),
-    color: "#666",
-    lineHeight: rs(22),
-  },
-  formContainer: {},
-  inputContainer: {
-    marginBottom: rs(24),
-  },
-  label: {
-    fontSize: rs(16),
-    color: "#000",
-    marginBottom: rs(8),
-    fontWeight: "500",
-  },
-  input: {
-    color: "black",
-    borderWidth: rs(2),
-    borderColor: "#e0e0e0",
-    borderRadius: rs(12),
-    paddingHorizontal: rs(14),
-    paddingVertical: rs(14),
-    fontSize: rs(16),
-    backgroundColor: "#fff",
-  },
-  inputDisabled: {
-    backgroundColor: "#f5f5f5",
-    borderColor: "#d0d0d0",
-    color: "#666",
-  },
-  loadingContainer: {
-    alignItems: "center",
-    paddingVertical: rs(40),
-  },
-  loadingText: {
-    fontSize: rs(16),
-    color: "#666",
-    marginTop: rs(16),
-  },
-  continueButton: {
-    backgroundColor: "#000",
-    paddingVertical: rs(16),
-    borderRadius: rs(12),
-    alignItems: "center",
-    marginBottom: rs(30),
-  },
-  disabledButton: {
-    backgroundColor: "#ccc",
-  },
-  continueText: {
-    color: "#fff",
-    fontSize: rs(18),
-    fontWeight: "600",
-  },
-  disabledText: {
-    color: "#999",
-  },
-  toggleRow: {
-    flexDirection: "row",
-    backgroundColor: "#f2f2f2",
-    padding: rs(4),
-    borderRadius: rs(10),
-    marginBottom: rs(16),
-  },
-  toggleButton: {
-    flex: 1,
-    paddingVertical: rs(10),
-    alignItems: "center",
-    borderRadius: 8,
-  },
-  toggleButtonActive: {
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: rs(4),
-    elevation: 1,
-  },
-  toggleText: {
-    color: "#666",
-    fontWeight: "500",
-  },
-  toggleTextActive: {
-    color: "#000",
-    fontWeight: "600",
-  },
-
-  alternativeContainer: {
-    marginBottom: rs(40),
-  },
-  divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: rs(24),
-  },
-  line: {
-    flex: 1,
-    height: rs(1),
-    backgroundColor: "#e0e0e0",
-  },
-  orText: {
-    marginHorizontal: rs(16),
-    color: "#666",
-    fontSize: rs(16),
-  },
-  createAccountButton: {
-    alignItems: "center",
-    paddingVertical: rs(12),
-  },
-  createAccountText: {
-    fontSize: rs(16),
-    color: "#000",
-    fontWeight: "500",
-  },
-  forgotPasswordButton: {
-    alignItems: "center",
-    paddingVertical: rs(12),
-    marginBottom: rs(40),
-  },
-  forgotPasswordText: {
-    fontSize: rs(16),
-    color: "#000",
-    fontWeight: "500",
-  },
-  phoneContainer: {
-    flexDirection: "row",
-    // marginBottom: 30,
-  },
-  countrySelector: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f5f5f5",
-    paddingHorizontal: rs(16),
-    paddingVertical: rs(16),
-    borderRadius: rs(12),
-    marginRight: rs(12),
-  },
-  flag: {
-    fontSize: rs(20),
-    marginRight: rs(8),
-  },
-  countryCode: {
-    fontSize: rs(16),
-    color: "#000",
-    marginRight: rs(8),
-  },
-  dropdown: {
-    fontSize: rs(12),
-    color: "#666",
-  },
-});
