@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, isAxiosError } from "axios";
 
-export const BASE_URL = "http://localhost:3030";
+export const BASE_URL = "https://api.delivery.herlay.com";
 export const AXIOS: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 30000,
