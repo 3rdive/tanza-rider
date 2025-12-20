@@ -8,7 +8,7 @@ import {
   useSegments,
 } from "expo-router";
 import React, { useEffect } from "react";
-import { SafeAreaView } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // Define props so that children must be a <Stack> element from expo-router
 type AuthStackProps = {

@@ -4,7 +4,6 @@ import type { JSX } from "react"; // Declare JSX variable
 import { useState, useEffect } from "react";
 import {
   Alert,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +12,7 @@ import {
   View,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
 import { showPermissionAlert } from "@/lib/functions";
 import { userService, storageService } from "@/lib/api";
@@ -56,7 +56,7 @@ export default function EditProfileScreen(): JSX.Element {
 
   const initialUsersAddress = (user as any)?.usersAddress || null;
   const [addressText, setAddressText] = useState<string>(
-    initialUsersAddress?.name || "",
+    initialUsersAddress?.name || ""
   );
   const [addressCoords, setAddressCoords] = useState<{
     lat: number;
@@ -66,13 +66,13 @@ export default function EditProfileScreen(): JSX.Element {
       typeof initialUsersAddress.lat === "number" &&
       typeof initialUsersAddress.lon === "number"
       ? { lat: initialUsersAddress.lat, lon: initialUsersAddress.lon }
-      : null,
+      : null
   );
 
   const dispatch = useAppDispatch();
   const isFocused = useIsFocused();
   const selected = useAppSelector(
-    (s) => (s as any).locationSearch?.selected || null,
+    (s) => (s as any).locationSearch?.selected || null
   );
 
   useEffect(() => {
@@ -222,7 +222,7 @@ export default function EditProfileScreen(): JSX.Element {
 
   const updateFormData = (
     field: keyof EditProfileFormData,
-    value: string,
+    value: string
   ): void => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
@@ -481,7 +481,7 @@ export default function EditProfileScreen(): JSX.Element {
                       showPermissionAlert(
                         "Permission needed",
                         "We need access to your photos to change your profile picture.",
-                        "photos",
+                        "photos"
                       );
                       return;
                     }
@@ -527,14 +527,14 @@ export default function EditProfileScreen(): JSX.Element {
                     } else {
                       Alert.alert(
                         "Update failed",
-                        update?.message || "Unable to update profile photo",
+                        update?.message || "Unable to update profile photo"
                       );
                     }
                   }
                 } else {
                   Alert.alert(
                     "Upload failed",
-                    resp?.message || "Unable to upload image",
+                    resp?.message || "Unable to upload image"
                   );
                 }
               } catch (e: any) {
@@ -542,7 +542,7 @@ export default function EditProfileScreen(): JSX.Element {
                   "Error",
                   e?.response?.data?.message ||
                     e?.message ||
-                    "Unable to change photo",
+                    "Unable to change photo"
                 );
               }
             }}

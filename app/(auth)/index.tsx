@@ -1,13 +1,7 @@
 import { router } from "expo-router";
 import React from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-  SafeAreaView,
-  StyleSheet,
-} from "react-native";
+import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/context/ThemeContext";
 
 const Onboarding = () => {

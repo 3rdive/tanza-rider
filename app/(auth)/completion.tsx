@@ -12,7 +12,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,6 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function CompleteInfoScreen() {
   const { mobile, otp } = useAuthFlow();
@@ -69,7 +69,7 @@ export default function CompleteInfoScreen() {
           "Sign up failed",
           Array.isArray(resp.message)
             ? resp.message[0]
-            : resp.message || "Please try again",
+            : resp.message || "Please try again"
         );
       }
     } catch (e: any) {
@@ -334,7 +334,7 @@ export default function CompleteInfoScreen() {
                 if (!ImagePicker || !ImagePicker.launchImageLibraryAsync) {
                   showAlert(
                     "Not Available",
-                    "Image picker is not available on this platform.",
+                    "Image picker is not available on this platform."
                   );
                   return;
                 }
@@ -349,7 +349,7 @@ export default function CompleteInfoScreen() {
                   ) {
                     showAlert(
                       "Not supported in Expo Go (iOS)",
-                      "The iOS Expo Go client does not include your app's photo permission strings and will crash when the app attempts to access the photo library. To test image selection on iOS please run a local development build or install a custom dev client / standalone build that includes your app's Info.plist entries.",
+                      "The iOS Expo Go client does not include your app's photo permission strings and will crash when the app attempts to access the photo library. To test image selection on iOS please run a local development build or install a custom dev client / standalone build that includes your app's Info.plist entries."
                     );
                     return;
                   }
@@ -385,7 +385,7 @@ export default function CompleteInfoScreen() {
                           showPermissionAlert(
                             "Permission needed",
                             "We need access to your photos to select a profile picture.",
-                            "photos",
+                            "photos"
                           );
                           return;
                         }
@@ -396,7 +396,7 @@ export default function CompleteInfoScreen() {
                       showPermissionAlert(
                         "Permission needed",
                         "We need access to your photos to select a profile picture.",
-                        "photos",
+                        "photos"
                       );
                       return;
                     }
@@ -415,7 +415,7 @@ export default function CompleteInfoScreen() {
                     console.warn("Failed to open image picker:", launchErr);
                     showAlert(
                       "Error",
-                      "Unable to open image picker. Please try again.",
+                      "Unable to open image picker. Please try again."
                     );
                     return;
                   }
@@ -452,14 +452,14 @@ export default function CompleteInfoScreen() {
                         // success true but no url - inform user
                         showAlert(
                           "Upload Error",
-                          "Upload succeeded but no image URL was returned.",
+                          "Upload succeeded but no image URL was returned."
                         );
                       }
                     } else {
                       showAlert(
                         "Upload Error",
                         resp?.message || "Unable to upload image",
-                        [{ text: "Cancel", style: "cancel" }],
+                        [{ text: "Cancel", style: "cancel" }]
                       );
                     }
                   } catch (uploadErr: any) {
@@ -469,7 +469,7 @@ export default function CompleteInfoScreen() {
                       "Upload Error",
                       uploadErr?.response?.data?.message ||
                         uploadErr?.message ||
-                        "Unable to upload image",
+                        "Unable to upload image"
                     );
                   } finally {
                     // Clear any leftover timer
@@ -484,7 +484,7 @@ export default function CompleteInfoScreen() {
                     "Upload Error",
                     e?.response?.data?.message ||
                       e?.message ||
-                      "Unable to upload image",
+                      "Unable to upload image"
                   );
                 } finally {
                   setIsUploading(false);

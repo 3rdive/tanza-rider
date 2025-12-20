@@ -7,7 +7,6 @@ import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   NativeSyntheticEvent,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
 
 const UI_SCALE = 0.82;
@@ -217,7 +217,7 @@ export default function OTPVerificationScreen() {
 
   const handleKeyPress = (
     e: NativeSyntheticEvent<TextInputKeyPressEventData>,
-    index: number,
+    index: number
   ) => {
     if (e.nativeEvent.key === "Backspace" && !otp[index] && index > 0) {
       inputRefs.current[index - 1].focus();

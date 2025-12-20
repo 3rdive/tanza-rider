@@ -5,13 +5,13 @@ import { useEffect } from "react";
 import {
   Alert,
   Image,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -34,7 +34,7 @@ export default function ProfileScreen() {
   const dispatch = useAppDispatch();
   const isFocused = useIsFocused();
   const selected = useAppSelector(
-    (s) => (s as any).locationSearch?.selected || null,
+    (s) => (s as any).locationSearch?.selected || null
   );
 
   const firstName = (user as any)?.firstName || "John";
@@ -127,8 +127,8 @@ export default function ProfileScreen() {
               docStatus === "APPROVED"
                 ? styles.approvedPill
                 : docStatus === "REJECTED"
-                  ? styles.rejectedPill
-                  : styles.pendingPill,
+                ? styles.rejectedPill
+                : styles.pendingPill,
             ]}
           >
             {docStatus}

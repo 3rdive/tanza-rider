@@ -17,11 +17,11 @@ import React, { useEffect, useRef } from "react";
 import {
   Animated,
   Dimensions,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
 
 const UI_SCALE = 0.82;
@@ -85,7 +85,7 @@ export default function AnimatedSplashScreen() {
 
   const handleAuthenticate = async () => {
     const hasOnboarded = await StorageMechanics.get(
-      StorageKeys.HAS_ONBOARDING_COMPLETED,
+      StorageKeys.HAS_ONBOARDING_COMPLETED
     );
     if (!fontsLoaded) return;
     StatusBar.setHidden(false, "fade");

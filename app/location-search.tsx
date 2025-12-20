@@ -1,21 +1,16 @@
 import { locationService } from "@/lib/api";
 import { setSelectedLocation } from "@/redux/slices/locationSearchSlice";
 import { router, useLocalSearchParams } from "expo-router";
-import React, {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useAppDispatch } from "@/redux/hooks/hooks";
 
 export default function LocationSearchScreen() {
@@ -96,7 +91,7 @@ export default function LocationSearchScreen() {
       });
 
       setResults(mapped);
-    // eslint-disable-next-line  @typescript-eslint/no-unused-vars
+      // eslint-disable-next-line  @typescript-eslint/no-unused-vars
     } catch (_e) {
       setResults([]);
     } finally {
@@ -124,7 +119,7 @@ export default function LocationSearchScreen() {
         lat: item.lat,
         lon: item.lon,
         context: String(context || ""),
-      }),
+      })
     );
     router.back();
   };

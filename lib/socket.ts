@@ -1,13 +1,14 @@
 import { io, Socket } from "socket.io-client";
-
-export const SOCKET_URL = "http://localhost:3006";
+import { BASE_URL } from "./api";
 
 export type SocketAuth = {
   token?: string | null;
 };
 
 export function createSocket(auth?: SocketAuth): Socket {
-  const socket = io(SOCKET_URL, {
+  const url = new URL(BASE_URL);
+  const finalurl = `${url.hostname}:3006`;
+  const socket = io(finalurl, {
     transports: ["websocket"],
     autoConnect: true,
     reconnection: true,

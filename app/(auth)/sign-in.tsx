@@ -10,13 +10,13 @@ import {
   ActivityIndicator,
   Animated,
   KeyboardAvoidingView,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
 
 const UI_SCALE = 0.82;
@@ -245,7 +245,7 @@ export default function SignInScreen() {
         } else {
           showAlert(
             "Account not found",
-            `No account found for the provided mobile number.`,
+            `No account found for the provided mobile number.`
           );
         }
       } catch (e: any) {

@@ -1,25 +1,16 @@
-import React, {
-  useState,
-  useRef,
-  useMemo,
-  useEffect,
-  useCallback,
-} from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
-  Alert,
   FlatList,
   RefreshControl,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { BalanceSummary } from "../../components/wallet/balance-summary";
-import { AddMoneyButton } from "../../components/wallet/add-money";
 import TransactionItem from "../../components/wallet/TransactionItem";
 import WeekFilterModal from "../../components/wallet/WeekFilterModal";
 import { useWalletData } from "../../hooks/useWalletData";
@@ -27,7 +18,6 @@ import { useTransactions } from "../../hooks/useTransactions";
 import {
   WeekFilterOption,
   WEEK_FILTER_OPTIONS,
-  WALLET_COLORS,
 } from "../../lib/walletConstants";
 import WalletBalanceCard from "@/components/fund_account/WalletBalanceCard";
 import { useTheme } from "../../context/ThemeContext";
@@ -64,7 +54,7 @@ const RiderWalletScreen: React.FC = () => {
     const todayStart = new Date(
       now.getFullYear(),
       now.getMonth(),
-      now.getDate(),
+      now.getDate()
     );
 
     // helper to get days ago
@@ -113,6 +103,7 @@ const RiderWalletScreen: React.FC = () => {
     container: {
       flex: 1,
       backgroundColor: colors.background,
+      paddingTop: 10,
     },
     header: {
       flexDirection: "row",
@@ -785,12 +776,12 @@ const RiderWalletScreen: React.FC = () => {
             {selectedWeekOption === WEEK_FILTER_OPTIONS.this_week
               ? "This Week"
               : selectedWeekOption === WEEK_FILTER_OPTIONS.last_week
-                ? "Last Week"
-                : selectedWeekOption === WEEK_FILTER_OPTIONS.last_2_weeks
-                  ? "Last 2 Weeks"
-                  : selectedWeekOption === WEEK_FILTER_OPTIONS.last_4_weeks
-                    ? "Last 4 Weeks"
-                    : "All"}
+              ? "Last Week"
+              : selectedWeekOption === WEEK_FILTER_OPTIONS.last_2_weeks
+              ? "Last 2 Weeks"
+              : selectedWeekOption === WEEK_FILTER_OPTIONS.last_4_weeks
+              ? "Last 4 Weeks"
+              : "All"}
           </Text>
           <Ionicons name="chevron-down" size={16} color={colors.success} />
         </TouchableOpacity>

@@ -2,20 +2,19 @@ import React, { useCallback, useMemo } from "react";
 import {
   View,
   Text,
-  SafeAreaView,
   StyleSheet,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import NotificationItem from "../../components/notification-item";
 import { poppinsFonts } from "../../theme/fonts";
 import { router } from "expo-router";
 import { INotificationItem } from "../../lib/api";
 import { useNotifications } from "../../hooks/useNotifications";
 import { safeNavigate } from "../../lib/navigation";
-
 
 function formatTimeAgo(dateStr: string) {
   const date = new Date(dateStr);
@@ -77,7 +76,9 @@ const NotificationsScreen: React.FC = () => {
     return (
       <View style={styles.stateWrap}>
         <Text style={styles.stateTitle}>No notifications yet</Text>
-        <Text style={styles.stateText}>We&#39;ll let you know when something arrives.</Text>
+        <Text style={styles.stateText}>
+          We&#39;ll let you know when something arrives.
+        </Text>
       </View>
     );
   }, [loading, error, onRefresh]);

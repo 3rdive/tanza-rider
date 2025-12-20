@@ -13,6 +13,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useMemo } from "react";
 import { Text, TextInput } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -64,11 +65,13 @@ export default function RootLayout() {
   }, [fontsLoaded]);
 
   return (
-    <ThemeProvider>
-      <ReduxProvider>
-        <RootLayoutContent />
-      </ReduxProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <ReduxProvider>
+          <RootLayoutContent />
+        </ReduxProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 

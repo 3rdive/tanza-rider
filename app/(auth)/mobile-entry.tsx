@@ -9,12 +9,12 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const SpotifyCreateAccount = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -53,7 +53,7 @@ const SpotifyCreateAccount = () => {
               text: "Sign In",
               onPress: () => router.push("/(auth)/sign-in"),
             },
-          ],
+          ]
         );
         return;
       }

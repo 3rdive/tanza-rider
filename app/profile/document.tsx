@@ -9,10 +9,10 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   Linking,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -101,7 +101,7 @@ export default function DocumentVerification() {
       requiredDocs.forEach((reqDoc) => {
         // Find if this document already exists in rider's documents
         const existingDoc = existingDocuments?.find(
-          (d) => d.docName === reqDoc.docName,
+          (d) => d.docName === reqDoc.docName
         );
 
         newDocData[reqDoc.docName] = {
@@ -133,7 +133,7 @@ export default function DocumentVerification() {
     if (!isEditable) {
       Alert.alert(
         "Not Editable",
-        "Documents cannot be modified when status is not INITIAL or REJECTED.",
+        "Documents cannot be modified when status is not INITIAL or REJECTED."
       );
       return;
     }
@@ -172,7 +172,7 @@ export default function DocumentVerification() {
                     }
                   },
                 },
-              ],
+              ]
             );
             return;
           }
@@ -234,7 +234,7 @@ export default function DocumentVerification() {
     if (!isEditable) {
       Alert.alert(
         "Not Editable",
-        "Documents cannot be modified when status is not INITIAL or REJECTED.",
+        "Documents cannot be modified when status is not INITIAL or REJECTED."
       );
       return;
     }
@@ -272,7 +272,7 @@ export default function DocumentVerification() {
                     }
                   },
                 },
-              ],
+              ]
             );
             return;
           }
@@ -331,7 +331,7 @@ export default function DocumentVerification() {
     if (documentStatus !== "INITIAL" && documentStatus !== "") {
       Alert.alert(
         "Not Allowed",
-        "Vehicle type can only be changed when documents have not been submitted yet.",
+        "Vehicle type can only be changed when documents have not been submitted yet."
       );
       return;
     }
@@ -375,7 +375,7 @@ export default function DocumentVerification() {
   const handleDateChange = (
     docName: string,
     event: any,
-    selectedDate?: Date,
+    selectedDate?: Date
   ) => {
     if (Platform.OS === "android") {
       setShowDatePicker(null);
@@ -430,7 +430,7 @@ export default function DocumentVerification() {
     if (missingDocs.length > 0) {
       Alert.alert(
         "Missing Documents",
-        `Please upload: ${missingDocs.map((d) => d.docName).join(", ")}`,
+        `Please upload: ${missingDocs.map((d) => d.docName).join(", ")}`
       );
       return;
     }
@@ -446,7 +446,7 @@ export default function DocumentVerification() {
         "Missing Expiration Dates",
         `Please provide expiration dates for: ${invalidExpirations
           .map((d) => d.docName)
-          .join(", ")}`,
+          .join(", ")}`
       );
       return;
     }
@@ -454,7 +454,7 @@ export default function DocumentVerification() {
     try {
       // Build documents array
       const documentsToUpload: IDocumentUpload[] = Object.values(
-        documentData,
+        documentData
       ).map((doc) => ({
         docName: doc.docName,
         docUrl: doc.docUrl,
@@ -477,7 +477,7 @@ export default function DocumentVerification() {
         "Submission Failed",
         err?.response?.data?.message ||
           err?.message ||
-          "Could not submit documents.",
+          "Could not submit documents."
       );
     }
   };
@@ -808,8 +808,8 @@ export default function DocumentVerification() {
                 status === "APPROVED"
                   ? styles.approved
                   : status === "REJECTED"
-                    ? styles.rejected
-                    : styles.pending,
+                  ? styles.rejected
+                  : styles.pending,
               ]}
             >
               {status}

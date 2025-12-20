@@ -5,13 +5,13 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { RFValue } from "react-native-responsive-fontsize";
 
 const UI_SCALE = 0.82;
@@ -22,12 +22,12 @@ export default function EmailEntryScreen() {
   // const [checking, setChecking] = useState(false);
   // const [emailExists, setEmailExists] = useState<boolean | null>(null);
   // const { setEmail: setAuthEmail, mobile, clearState } = useAuthFlow();
-	//
+  //
   // const validateEmail = (email: string) => {
   //   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   //   return emailRegex.test(email);
   // };
-	//
+  //
   // const handleNext = () => {
   //   if (!validateEmail(email)) {
   //     Alert.alert("Invalid Email", "Please enter a valid email address");
@@ -36,7 +36,7 @@ export default function EmailEntryScreen() {
   //   setAuthEmail(email);
   //   router.push("/completion");
   // };
-	//
+  //
   // // When email changes and is valid, check if it already exists
   // useEffect(() => {
   //   if (!validateEmail(email)) {
@@ -60,14 +60,14 @@ export default function EmailEntryScreen() {
   //     clearTimeout(timer);
   //   };
   // }, [email]);
-	//
+  //
   // useEffect(() => {
   //   if (!mobile) {
   //     clearState();
   //     router.replace("/(auth)/mobile-entry");
   //   }
   // }, [mobile]);
-	//
+  //
   // return (
   //   <SafeAreaView style={styles.container}>
   //     <View style={styles.content}>
@@ -75,7 +75,7 @@ export default function EmailEntryScreen() {
   //       <Text style={styles.subtitle}>
   //         Add your email to aid in account recovery
   //       </Text>
-	//
+  //
   //       <View style={styles.inputContainer}>
   //         <Text style={styles.label}>Email</Text>
   //         <TextInput
@@ -93,7 +93,7 @@ export default function EmailEntryScreen() {
   //           </Text>
   //         )}
   //       </View>
-	//
+  //
   //       <TouchableOpacity
   //         style={[
   //           styles.nextButton,
@@ -117,7 +117,7 @@ export default function EmailEntryScreen() {
   //   </SafeAreaView>
   // );
 
- return <View>Email Entry Screen</View>;
+  return <View>Email Entry Screen</View>;
 }
 
 const styles = StyleSheet.create({

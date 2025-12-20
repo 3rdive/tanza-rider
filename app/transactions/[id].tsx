@@ -5,10 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { transactionService, ITransactionDetail } from "../../lib/api";
@@ -18,7 +18,7 @@ const TransactionDetailScreen: React.FC = () => {
   const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [transaction, setTransaction] = useState<ITransactionDetail | null>(
-    null,
+    null
   );
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +43,7 @@ const TransactionDetailScreen: React.FC = () => {
     } catch (err: any) {
       console.error("Error fetching transaction details:", err);
       setError(
-        err?.response?.data?.message || "Failed to load transaction details",
+        err?.response?.data?.message || "Failed to load transaction details"
       );
     } finally {
       setIsLoading(false);
@@ -528,7 +528,7 @@ const TransactionDetailScreen: React.FC = () => {
                     text: "Contact Support",
                     onPress: () => router.push("/profile/help-support"),
                   },
-                ],
+                ]
               );
             }}
           >
