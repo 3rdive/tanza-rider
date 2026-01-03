@@ -3,7 +3,7 @@ export const tzColors = {
     primary: "#00B624",
     success: "#00B624",
     error: "#d9534f",
-    background: "#f8f8f8",
+    background: "#000000",
     surface: "#ffffff",
     text: "#222222",
     textSecondary: "#666666",

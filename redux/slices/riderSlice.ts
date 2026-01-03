@@ -19,9 +19,11 @@ const initialState: RiderState = {
 
 export const fetchRiderMe = createAsyncThunk(
   "rider/fetchMe",
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
     try {
-      const res = await riderService.getMe();
+      const state = getState() as any;
+      const token = state.user?.access_token;
+      const res = await riderService.getMe(token);
       return res.data as IRider;
     } catch (err: any) {
       // normalize error
@@ -29,21 +31,23 @@ export const fetchRiderMe = createAsyncThunk(
         err?.response?.data?.message || err?.message || "Unknown error";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 export const updateRiderMe = createAsyncThunk(
   "rider/updateMe",
-  async (payload: IUpdateRiderPayload, { rejectWithValue }) => {
+  async (payload: IUpdateRiderPayload, { rejectWithValue, getState }) => {
     try {
-      const res = await riderService.updateMe(payload);
+      const state = getState() as any;
+      const token = state.user?.access_token;
+      const res = await riderService.updateMe(payload, token);
       return res.data as IRider;
     } catch (err: any) {
       const message =
         err?.response?.data?.message || err?.message || "Update failed";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 const riderSlice = createSlice({
@@ -70,7 +74,7 @@ const riderSlice = createSlice({
           state.loading = false;
           state.data = action.payload;
           state.error = null;
-        }
+        },
       )
       .addCase(fetchRiderMe.rejected, (state, action) => {
         state.loading = false;
@@ -89,7 +93,7 @@ const riderSlice = createSlice({
           state.updating = false;
           state.data = action.payload;
           state.updateError = null;
-        }
+        },
       )
       .addCase(updateRiderMe.rejected, (state, action) => {
         state.updating = false;

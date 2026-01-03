@@ -1,5 +1,11 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  useColorScheme,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import {
@@ -25,12 +31,76 @@ interface TransactionItemProps {
 }
 
 const TransactionItem: React.FC<TransactionItemProps> = ({ transaction }) => {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
+  function getAmountSign(transaction: any): string {
+    if (transaction.apiType === "FAILED_PAYOUT") {
+      return "";
+    }
+    // DEPOSIT and REFUND add money to wallet (positive)
+    if (
+      transaction.type === "reward" ||
+      transaction.type === "refund" ||
+      transaction.type === "deposit"
+    ) {
+      return "+";
+    }
+    // ORDER and WITHDRAWAL remove money from wallet (negative)
+    return "-";
+  }
+
+  // Dynamic styles for dark mode
+  const dynamicStyles = StyleSheet.create({
+    transactionItem: {
+      backgroundColor: isDark ? "#18181b" : "#fff",
+      borderBottomColor: isDark ? "#27272a" : "#f1f5f9",
+    },
+    transactionIcon: {
+      backgroundColor: isDark ? "#27272a" : "#f8fafc",
+    },
+    transactionDescription: {
+      color: isDark ? "#f4f4f5" : "#000",
+    },
+    transactionDate: {
+      color: isDark ? "#a1a1aa" : "#64748b",
+    },
+    statusBadge: {
+      backgroundColor:
+        transaction.status === "complete"
+          ? isDark
+            ? "#14532d"
+            : "#dcfce7"
+          : transaction.status === "refunded"
+          ? isDark
+            ? "#78350f"
+            : "#fef3c7"
+          : isDark
+          ? "#7f1d1d"
+          : "#fee2e2",
+    },
+    statusText: {
+      color:
+        transaction.status === "complete"
+          ? isDark
+            ? "#bbf7d0"
+            : "#16a34a"
+          : transaction.status === "refunded"
+          ? isDark
+            ? "#fde68a"
+            : "#d97706"
+          : isDark
+          ? "#fecaca"
+          : "#dc2626",
+    },
+  });
+
   return (
     <TouchableOpacity
-      style={styles.transactionItem}
+      style={[styles.transactionItem, dynamicStyles.transactionItem]}
       onPress={() => router.push(`/transactions/${transaction.id}`)}
     >
-      <View style={styles.transactionIcon}>
+      <View style={[styles.transactionIcon, dynamicStyles.transactionIcon]}>
         <Ionicons
           name={getTransactionIcon(transaction.type) as any}
           size={20}
@@ -39,10 +109,15 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction }) => {
       </View>
 
       <View style={styles.transactionDetails}>
-        <Text style={styles.transactionDescription}>
+        <Text
+          style={[
+            styles.transactionDescription,
+            dynamicStyles.transactionDescription,
+          ]}
+        >
           {transaction.description}
         </Text>
-        <Text style={styles.transactionDate}>
+        <Text style={[styles.transactionDate, dynamicStyles.transactionDate]}>
           {formatDate(transaction.date)}
         </Text>
       </View>
@@ -56,35 +131,11 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction }) => {
             },
           ]}
         >
-          {transaction.amount > 0 ? "+" : ""}₦
+          {getAmountSign(transaction)}₦
           {Math.abs(transaction.amount).toLocaleString()}
         </Text>
-        <View
-          style={[
-            styles.statusBadge,
-            {
-              backgroundColor:
-                transaction.status === "complete"
-                  ? "#dcfce7"
-                  : transaction.status === "refunded"
-                  ? "#fef3c7"
-                  : "#fee2e2",
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.statusText,
-              {
-                color:
-                  transaction.status === "complete"
-                    ? "#16a34a"
-                    : transaction.status === "refunded"
-                    ? "#d97706"
-                    : "#dc2626",
-              },
-            ]}
-          >
+        <View style={[styles.statusBadge, dynamicStyles.statusBadge]}>
+          <Text style={[styles.statusText, dynamicStyles.statusText]}>
             {transaction.status}
           </Text>
         </View>

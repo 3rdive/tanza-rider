@@ -1,5 +1,7 @@
 import AuthStack from "@/app/auth-stacks";
 import GlobalAlert from "@/components/GlobalAlert";
+import { Toast } from "@/components/Toast";
+import { ToastProvider } from "@/context/ToastContext";
 import { ReduxProvider } from "@/redux/redux-provider";
 import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 import {
@@ -68,7 +70,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <ReduxProvider>
-          <RootLayoutContent />
+          <ToastProvider>
+            <RootLayoutContent />
+          </ToastProvider>
         </ReduxProvider>
       </ThemeProvider>
     </SafeAreaProvider>
@@ -78,13 +82,14 @@ export default function RootLayout() {
 function RootLayoutContent() {
   return (
     <>
-      <StatusBar style="light" animated />
+      <StatusBar style="light" backgroundColor="black" />
       <GlobalAlert />
+      <Toast />
       <AuthStack>
         <Stack
           screenOptions={{
             headerShown: false,
-            headerTintColor: "#fff",
+            headerTintColor: "#0000",
           }}
         >
           <Stack.Screen name="index" />

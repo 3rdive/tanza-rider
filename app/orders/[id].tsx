@@ -42,7 +42,7 @@ export default function OrderDetailScreen() {
       alignItems: "center",
       justifyContent: "space-between",
       paddingHorizontal: 16,
-      paddingTop: 60,
+      paddingTop: 20,
       paddingBottom: 16,
       backgroundColor: colors.surface,
       borderBottomWidth: 1,
@@ -317,7 +317,7 @@ export default function OrderDetailScreen() {
       setError(
         err?.response?.data?.message ||
           err?.message ||
-          "Failed to load order details",
+          "Failed to load order details"
       );
     } finally {
       setLoading(false);
@@ -461,7 +461,7 @@ export default function OrderDetailScreen() {
     : [];
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -646,7 +646,7 @@ export default function OrderDetailScreen() {
                             >
                               Delivered on{" "}
                               {new Date(
-                                destination.deliveredAt,
+                                destination.deliveredAt
                               ).toLocaleString()}
                             </Text>
                           )}
@@ -692,6 +692,27 @@ export default function OrderDetailScreen() {
                 ₦{safeNumber(order.serviceChargeAmount).toLocaleString()}
               </Text>
             </View>
+
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Payment Method</Text>
+              <Text
+                style={[
+                  styles.priceValue,
+                  { color: order.isCashPayment ? "#FFA500" : colors.text },
+                ]}
+              >
+                {order.isCashPayment ? "Pay on Delivery" : "Prepaid"}
+              </Text>
+            </View>
+
+            {safeNumber(order.cashAmountToReceive) > 0 && (
+              <View style={styles.priceRow}>
+                <Text style={styles.priceLabel}>Cash to Collect</Text>
+                <Text style={[styles.priceValue, { color: colors.error }]}>
+                  ₦{safeNumber(order.cashAmountToReceive).toLocaleString()}
+                </Text>
+              </View>
+            )}
 
             <View style={styles.divider} />
 
@@ -748,7 +769,7 @@ export default function OrderDetailScreen() {
                                 {
                                   hour: "2-digit",
                                   minute: "2-digit",
-                                },
+                                }
                               )
                             : ""}
                         </Text>

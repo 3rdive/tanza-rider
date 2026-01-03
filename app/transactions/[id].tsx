@@ -503,6 +503,23 @@ const TransactionDetailScreen: React.FC = () => {
               </View>
             )}
 
+            {transaction.order.isCashPayment && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Payment Method</Text>
+                <Text style={styles.infoValue}>Pay on Delivery</Text>
+              </View>
+            )}
+
+            {transaction.order.cashAmountToReceive !== undefined &&
+              transaction.order.cashAmountToReceive > 0 && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Cash to Collect</Text>
+                  <Text style={styles.infoValue}>
+                    {formatAmount(transaction.order.cashAmountToReceive)}
+                  </Text>
+                </View>
+              )}
+
             {transaction.order.totalAmount && (
               <View style={[styles.infoRow, styles.totalRow]}>
                 <Text style={styles.totalLabel}>Total Amount</Text>

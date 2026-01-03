@@ -7,7 +7,8 @@ export type SocketAuth = {
 
 export function createSocket(auth?: SocketAuth): Socket {
   const url = new URL(BASE_URL);
-  const finalurl = `${url.hostname}:3006`;
+  // const finalurl = `${url.hostname}:3006`;
+  const finalurl = `2.tcp.eu.ngrok.io:16923`;
   const socket = io(finalurl, {
     transports: ["websocket"],
     autoConnect: true,

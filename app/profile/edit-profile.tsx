@@ -4,6 +4,8 @@ import type { JSX } from "react"; // Declare JSX variable
 import { useState, useEffect } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -93,6 +95,7 @@ export default function EditProfileScreen(): JSX.Element {
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isPhotoUploading, setIsPhotoUploading] = useState<boolean>(false);
 
   const validatePhoneNumber = (phone: string): boolean => {
     const phoneRegex = /^\+?[\d\s-()]{10,}$/;
@@ -287,6 +290,7 @@ export default function EditProfileScreen(): JSX.Element {
     },
     avatarContainer: {
       marginBottom: rs(16),
+      position: "relative",
     },
     avatarFallback: {
       width: rs(80),
@@ -312,6 +316,17 @@ export default function EditProfileScreen(): JSX.Element {
       fontSize: rs(14),
       color: colors.success,
       fontWeight: "500",
+    },
+    avatarOverlay: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+      borderRadius: rs(40),
+      backgroundColor: "rgba(0,0,0,0.35)",
+      justifyContent: "center",
+      alignItems: "center",
     },
     formSection: {
       backgroundColor: colors.surface,
@@ -432,184 +447,200 @@ export default function EditProfileScreen(): JSX.Element {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Profile Picture Section */}
-        <View style={styles.profilePictureSection}>
-          <View style={styles.avatarContainer}>
-            {Boolean((user as any)?.profilePic) ? (
-              <Image
-                source={{ uri: (user as any)?.profilePic as string }}
-                style={styles.avatarFallback}
-                contentFit="cover"
-              />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarText}>
-                  {formData.firstName[0]?.toUpperCase() || "J"}
-                  {formData.lastName[0]?.toUpperCase() || "D"}
-                </Text>
-              </View>
-            )}
-          </View>
-          <TouchableOpacity
-            style={styles.changePhotoButton}
-            disabled={isLoading}
-            onPress={async () => {
-              try {
-                // On web, permissions are typically not required in the same way,
-                // so skip explicit permission checks there.
-                if (Platform.OS !== "web") {
-                  // Check current permission first to avoid repeatedly prompting the user
-                  const current =
-                    await ImagePicker.getMediaLibraryPermissionsAsync();
-                  const currentGranted =
-                    typeof (current as any)?.granted === "boolean"
-                      ? (current as any).granted
-                      : (current as any)?.status === "granted";
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Profile Picture Section */}
+          <View style={styles.profilePictureSection}>
+            <View style={styles.avatarContainer}>
+              {Boolean((user as any)?.profilePic) ? (
+                <Image
+                  source={{ uri: (user as any)?.profilePic as string }}
+                  style={styles.avatarFallback}
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  <Text style={styles.avatarText}>
+                    {formData.firstName[0]?.toUpperCase() || "J"}
+                    {formData.lastName[0]?.toUpperCase() || "D"}
+                  </Text>
+                </View>
+              )}
+              {isPhotoUploading && (
+                <View style={styles.avatarOverlay}>
+                  <ActivityIndicator size="large" color="#FFFFFF" />
+                </View>
+              )}
+            </View>
+            <TouchableOpacity
+              style={styles.changePhotoButton}
+              disabled={isLoading || isPhotoUploading}
+              onPress={async () => {
+                try {
+                  // On web, permissions are typically not required in the same way,
+                  // so skip explicit permission checks there.
+                  if (Platform.OS !== "web") {
+                    // Check current permission first to avoid repeatedly prompting the user
+                    const current =
+                      await ImagePicker.getMediaLibraryPermissionsAsync();
+                    const currentGranted =
+                      typeof (current as any)?.granted === "boolean"
+                        ? (current as any).granted
+                        : (current as any)?.status === "granted";
 
-                  if (!currentGranted) {
-                    // Request permission
-                    const request =
-                      await ImagePicker.requestMediaLibraryPermissionsAsync();
-                    const granted =
-                      typeof (request as any)?.granted === "boolean"
-                        ? (request as any).granted
-                        : (request as any)?.status === "granted";
+                    if (!currentGranted) {
+                      // Request permission
+                      const request =
+                        await ImagePicker.requestMediaLibraryPermissionsAsync();
+                      const granted =
+                        typeof (request as any)?.granted === "boolean"
+                          ? (request as any).granted
+                          : (request as any)?.status === "granted";
 
-                    if (!granted) {
-                      // Inform user and offer to open settings
-                      showPermissionAlert(
-                        "Permission needed",
-                        "We need access to your photos to change your profile picture.",
-                        "photos"
-                      );
-                      return;
+                      if (!granted) {
+                        // Inform user and offer to open settings
+                        showPermissionAlert(
+                          "Permission needed",
+                          "We need access to your photos to change your profile picture.",
+                          "photos"
+                        );
+                        return;
+                      }
                     }
                   }
-                }
 
-                const result = await ImagePicker.launchImageLibraryAsync({
-                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                  allowsEditing: true,
-                  aspect: [1, 1],
-                  quality: 0.8,
-                });
+                  const result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                    allowsEditing: true,
+                    aspect: [1, 1],
+                    quality: 0.8,
+                  });
 
-                // Support both `canceled` and older `cancelled` flags
-                const wasCancelled =
-                  (result as any).canceled ??
-                  (result as any).cancelled ??
-                  false;
-                if (wasCancelled) return;
+                  // Support both `canceled` and older `cancelled` flags
+                  const wasCancelled =
+                    (result as any).canceled ??
+                    (result as any).cancelled ??
+                    false;
+                  if (wasCancelled) return;
 
-                // Support both new assets array and older uri field
-                const uri =
-                  (result as any).assets?.[0]?.uri ?? (result as any).uri;
-                if (!uri) return;
+                  // Support both new assets array and older uri field
+                  const uri =
+                    (result as any).assets?.[0]?.uri ?? (result as any).uri;
+                  if (!uri) return;
 
-                // Upload image and update profile
-                const resp = await storageService.upload({
-                  uri,
-                  type: "image/jpeg",
-                });
+                  // Upload image and update profile
+                  setIsPhotoUploading(true);
+                  const resp = await storageService.upload({
+                    uri,
+                    type: "image/jpeg",
+                  });
 
-                if (resp?.success) {
-                  const url = (resp.data as any)?.url as string;
-                  if (url) {
-                    const update = await userService.updateProfile({
-                      profilePic: url,
-                    });
-                    if (update?.success && update.data) {
-                      await setUser({
-                        access_token: access_token || null,
-                        user: update.data as any,
+                  if (resp?.success) {
+                    const url = (resp.data as any)?.url as string;
+                    if (url) {
+                      const update = await userService.updateProfile({
+                        profilePic: url,
                       });
-                    } else {
-                      Alert.alert(
-                        "Update failed",
-                        update?.message || "Unable to update profile photo"
-                      );
+                      if (update?.success && update.data) {
+                        await setUser({
+                          access_token: access_token || null,
+                          user: update.data as any,
+                        });
+                      } else {
+                        Alert.alert(
+                          "Update failed",
+                          update?.message || "Unable to update profile photo"
+                        );
+                      }
                     }
+                  } else {
+                    Alert.alert(
+                      "Upload failed",
+                      resp?.message || "Unable to upload image"
+                    );
                   }
-                } else {
+                } catch (e: any) {
                   Alert.alert(
-                    "Upload failed",
-                    resp?.message || "Unable to upload image"
+                    "Error",
+                    e?.response?.data?.message ||
+                      e?.message ||
+                      "Unable to change photo"
                   );
+                } finally {
+                  setIsPhotoUploading(false);
                 }
-              } catch (e: any) {
-                Alert.alert(
-                  "Error",
-                  e?.response?.data?.message ||
-                    e?.message ||
-                    "Unable to change photo"
-                );
-              }
-            }}
-          >
-            <Text style={styles.changePhotoText}>Change Photo</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Form Fields */}
-        <View style={styles.formSection}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>First Name</Text>
-            <TextInput
-              style={[styles.input, errors.firstName && styles.errorInput]}
-              value={formData.firstName}
-              onChangeText={(text) => updateFormData("firstName", text)}
-              placeholder="Enter your first name"
-              keyboardType="default"
-              autoCapitalize="words"
-              editable={!isLoading}
-            />
-            {errors.firstName && (
-              <Text style={styles.errorText}>{errors.firstName}</Text>
-            )}
+              }}
+            >
+              <Text style={styles.changePhotoText}>
+                {isPhotoUploading ? "Uploading..." : "Change Photo"}
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Last Name</Text>
-            <TextInput
-              style={[styles.input, errors.lastName && styles.errorInput]}
-              value={formData.lastName}
-              onChangeText={(text) => updateFormData("lastName", text)}
-              placeholder="Enter your last name"
-              keyboardType="default"
-              autoCapitalize="words"
-              editable={!isLoading}
-            />
-            {errors.lastName && (
-              <Text style={styles.errorText}>{errors.lastName}</Text>
-            )}
+          {/* Form Fields */}
+          <View style={styles.formSection}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>First Name</Text>
+              <TextInput
+                style={[styles.input, errors.firstName && styles.errorInput]}
+                value={formData.firstName}
+                onChangeText={(text) => updateFormData("firstName", text)}
+                placeholder="Enter your first name"
+                keyboardType="default"
+                autoCapitalize="words"
+                editable={!isLoading}
+              />
+              {errors.firstName && (
+                <Text style={styles.errorText}>{errors.firstName}</Text>
+              )}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Last Name</Text>
+              <TextInput
+                style={[styles.input, errors.lastName && styles.errorInput]}
+                value={formData.lastName}
+                onChangeText={(text) => updateFormData("lastName", text)}
+                placeholder="Enter your last name"
+                keyboardType="default"
+                autoCapitalize="words"
+                editable={!isLoading}
+              />
+              {errors.lastName && (
+                <Text style={styles.errorText}>{errors.lastName}</Text>
+              )}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Phone Number</Text>
+              <TextInput
+                style={[styles.input, errors.phoneNumber && styles.errorInput]}
+                value={formData.phoneNumber}
+                onChangeText={(text) => updateFormData("phoneNumber", text)}
+                placeholder="Enter your phone number"
+                keyboardType="phone-pad"
+                autoCapitalize="sentences"
+                editable={!isLoading}
+              />
+              {errors.phoneNumber && (
+                <Text style={styles.errorText}>{errors.phoneNumber}</Text>
+              )}
+            </View>
           </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Phone Number</Text>
-            <TextInput
-              style={[styles.input, errors.phoneNumber && styles.errorInput]}
-              value={formData.phoneNumber}
-              onChangeText={(text) => updateFormData("phoneNumber", text)}
-              placeholder="Enter your phone number"
-              keyboardType="phone-pad"
-              autoCapitalize="sentences"
-              editable={!isLoading}
-            />
-            {errors.phoneNumber && (
-              <Text style={styles.errorText}>{errors.phoneNumber}</Text>
-            )}
+          {/* Info Section */}
+          <View style={styles.infoSection}>
+            <Text style={styles.infoText}>
+              Your profile information is used to personalize your experience
+              and for account verification purposes.
+            </Text>
           </View>
-        </View>
-
-        {/* Info Section */}
-        <View style={styles.infoSection}>
-          <Text style={styles.infoText}>
-            Your profile information is used to personalize your experience and
-            for account verification purposes.
-          </Text>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

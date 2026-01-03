@@ -153,7 +153,7 @@ export default function ActiveDeliveryCard({
       Alert.alert(
         "Error",
         error?.response?.data?.message ||
-          "Failed to mark destination as delivered",
+          "Failed to mark destination as delivered"
       );
     } finally {
       setMarkingDelivered(null);
@@ -310,10 +310,6 @@ export default function ActiveDeliveryCard({
       alignItems: "center",
       gap: 6,
       marginTop: 4,
-    },
-    userEmail: {
-      fontSize: 12,
-      color: colors.textSecondary,
     },
     orderDetailsGrid: {
       flexDirection: "row",
@@ -582,14 +578,6 @@ export default function ActiveDeliveryCard({
                       />
                     </TouchableOpacity>
                   </View>
-                  <View style={styles.userDetailsRow}>
-                    <Ionicons
-                      name="mail"
-                      size={14}
-                      color={colors.textSecondary}
-                    />
-                    <Text style={styles.userEmail}>Contact via phone</Text>
-                  </View>
                 </View>
               </View>
             </View>
@@ -643,6 +631,22 @@ export default function ActiveDeliveryCard({
                     {activeOrder.userFullName}
                   </Text>
                 </View>
+                {activeOrder.isCashPayment && (
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Payment Method</Text>
+                    <Text style={[styles.detailValue, { color: "#FF9500" }]}>
+                      Pay on Delivery
+                    </Text>
+                  </View>
+                )}
+                {activeOrder.cashAmountToReceive > 0 && (
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Cash to Receive</Text>
+                    <Text style={[styles.detailValue, styles.amountText]}>
+                      ₦{activeOrder.cashAmountToReceive.toLocaleString()}
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
 
@@ -698,26 +702,6 @@ export default function ActiveDeliveryCard({
                           />
                         </TouchableOpacity>
                       </View>
-                      <View style={styles.contactRow}>
-                        <Ionicons
-                          name="mail"
-                          size={16}
-                          color={colors.textSecondary}
-                        />
-                        <Text style={styles.contactText}>
-                          {activeOrder.sender.email}
-                        </Text>
-                        <TouchableOpacity
-                          onPress={() => onCopy(activeOrder.sender.email)}
-                          style={styles.copyButton}
-                        >
-                          <Ionicons
-                            name="copy-outline"
-                            size={16}
-                            color={colors.success}
-                          />
-                        </TouchableOpacity>
-                      </View>
                     </View>
                   </View>
 
@@ -753,26 +737,6 @@ export default function ActiveDeliveryCard({
                         </Text>
                         <TouchableOpacity
                           onPress={() => onCopy(activeOrder.recipient.phone)}
-                          style={styles.copyButton}
-                        >
-                          <Ionicons
-                            name="copy-outline"
-                            size={16}
-                            color={colors.success}
-                          />
-                        </TouchableOpacity>
-                      </View>
-                      <View style={styles.contactRow}>
-                        <Ionicons
-                          name="mail"
-                          size={16}
-                          color={colors.textSecondary}
-                        />
-                        <Text style={styles.contactText}>
-                          {activeOrder.recipient.email}
-                        </Text>
-                        <TouchableOpacity
-                          onPress={() => onCopy(activeOrder.recipient.email)}
                           style={styles.copyButton}
                         >
                           <Ionicons
@@ -938,7 +902,7 @@ export default function ActiveDeliveryCard({
                                   >
                                     ✓ Delivered at{" "}
                                     {new Date(
-                                      destination.deliveredAt,
+                                      destination.deliveredAt
                                     ).toLocaleString()}
                                   </Text>
                                 )}
@@ -949,7 +913,7 @@ export default function ActiveDeliveryCard({
                             <View style={styles.locationConnector} />
                           )}
                         </React.Fragment>
-                      ),
+                      )
                     )}
                   </>
                 ) : (

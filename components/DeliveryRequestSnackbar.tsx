@@ -45,7 +45,7 @@ export default function DeliveryRequestSnackbar() {
   const [timeLeft, setTimeLeft] = useState(30);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoDeclineTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
+    null
   );
 
   // Convert IAssignedOrder to the format expected by useDeliveryRequest
@@ -62,8 +62,10 @@ export default function DeliveryRequestSnackbar() {
       timeAgo: "Just now",
       hasMultipleDeliveries: order.hasMultipleDeliveries,
       deliveryDestinations: order.deliveryDestinations,
+      isCashPayment: order.isCashPayment,
+      cashAmountToReceive: order.cashAmountToReceive,
     }),
-    [],
+    []
   );
 
   // Clear timer when component unmounts or request is handled
@@ -136,7 +138,7 @@ export default function DeliveryRequestSnackbar() {
     setTimeout(() => {
       if (isActive && assignedOrders.length > 0) {
         const nextOrder = assignedOrders.find(
-          (order) => !processedOrdersRef.current.has(order.id),
+          (order) => !processedOrdersRef.current.has(order.id)
         );
         if (nextOrder) {
           processedOrdersRef.current.add(nextOrder.id);
@@ -544,7 +546,7 @@ export default function DeliveryRequestSnackbar() {
                         >
                           {idx + 1}. {dest.dropOffLocation.address}
                         </Text>
-                      ),
+                      )
                     )}
                   </>
                 ) : (
@@ -555,10 +557,39 @@ export default function DeliveryRequestSnackbar() {
               </View>
 
               <View style={styles.snackbarFooter}>
-                <Text style={styles.snackbarDistance}>
-                  {currentRequest.distance.toFixed(2)} KM
-                  {currentRequest.hasMultipleDeliveries && " (total)"}
-                </Text>
+                <View>
+                  <Text style={styles.snackbarDistance}>
+                    {currentRequest.distance.toFixed(2)} KM
+                    {currentRequest.hasMultipleDeliveries && " (total)"}
+                  </Text>
+                  {currentRequest.isCashPayment && (
+                    <Text
+                      style={[
+                        styles.snackbarDistance,
+                        { color: "#FF9500", marginTop: 4 },
+                      ]}
+                    >
+                      Pay on Delivery
+                    </Text>
+                  )}
+                  {(currentRequest.cashAmountToReceive ?? 0) > 0 && (
+                    <Text
+                      style={[
+                        styles.snackbarDistance,
+                        {
+                          color: colors.success,
+                          marginTop: 2,
+                          fontWeight: "600",
+                        },
+                      ]}
+                    >
+                      Receive: ₦
+                      {(
+                        currentRequest.cashAmountToReceive ?? 0
+                      ).toLocaleString()}
+                    </Text>
+                  )}
+                </View>
                 <Text style={styles.snackbarEarning}>
                   ₦{currentRequest.estimatedEarning?.toLocaleString()}
                 </Text>

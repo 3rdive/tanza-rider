@@ -1,11 +1,10 @@
-"use client";
-
 import { router } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Image,
   ScrollView,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -36,10 +35,10 @@ export default function ProfileScreen() {
   const selected = useAppSelector(
     (s) => (s as any).locationSearch?.selected || null
   );
+  const [refreshing, setRefreshing] = useState(false);
 
   const firstName = (user as any)?.firstName || "John";
   const lastName = (user as any)?.lastName || "Doe";
-  const email = (user as any)?.email || "john.doe@example.com";
   const mobile = (user as any)?.mobile || "";
   const countryCode = (user as any)?.countryCode || "+234";
   const profileImage = (user as any)?.profilePic || null;
@@ -91,6 +90,24 @@ export default function ProfileScreen() {
       { text: "Cancel", style: "cancel" },
       { text: "Logout", style: "destructive", onPress: () => logOut() },
     ]);
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const resp = await userService.getProfile();
+      if (resp?.success && resp.data) {
+        await setUser({
+          access_token: access_token || null,
+          user: resp.data as any,
+        });
+      }
+    } catch (error) {
+      // Silently fail; user still has current data
+      console.error("Profile refresh failed:", error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   type ProfileItemProps = {
@@ -309,7 +326,17 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.success}
+          />
+        }
+      >
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
@@ -327,7 +354,6 @@ export default function ProfileScreen() {
           <Text style={styles.userName}>
             {firstName} {lastName}
           </Text>
-          <Text style={styles.userEmail}>{email}</Text>
         </View>
 
         {/* Personal Information */}

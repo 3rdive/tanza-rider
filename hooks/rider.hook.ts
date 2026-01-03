@@ -12,6 +12,7 @@ import {
 export const useRider = () => {
   const dispatch = useDispatch<AppDispatch>();
   const riderState = useSelector((state: RootState) => state.rider);
+  const token = useSelector((state: any) => state.user?.access_token);
   const [loadingRequiredDocs, setLoadingRequiredDocs] = useState(false);
   const [uploadingDocuments, setUploadingDocuments] = useState(false);
   const [deletingDocument, setDeletingDocument] = useState(false);
@@ -26,7 +27,7 @@ export const useRider = () => {
     (payload: IUpdateRiderPayload) => {
       return dispatch(updateRiderMe(payload));
     },
-    [dispatch]
+    [dispatch],
   );
 
   // Get required documents for vehicle type
@@ -34,7 +35,10 @@ export const useRider = () => {
     async (vehicleType: string): Promise<IRequiredDocument[]> => {
       setLoadingRequiredDocs(true);
       try {
-        const response = await riderService.getRequiredDocuments(vehicleType);
+        const response = await riderService.getRequiredDocuments(
+          vehicleType,
+          token,
+        );
         return response.data || [];
       } catch (error) {
         console.error("Error fetching required documents:", error);
@@ -43,7 +47,7 @@ export const useRider = () => {
         setLoadingRequiredDocs(false);
       }
     },
-    []
+    [token],
   );
 
   // Upload or update documents
@@ -51,7 +55,7 @@ export const useRider = () => {
     async (documents: IDocumentUpload[]) => {
       setUploadingDocuments(true);
       try {
-        const response = await riderService.uploadDocuments(documents);
+        const response = await riderService.uploadDocuments(documents, token);
         // Refresh rider data to get updated documents
         await dispatch(fetchRiderMe());
         return response.data || [];
@@ -62,7 +66,7 @@ export const useRider = () => {
         setUploadingDocuments(false);
       }
     },
-    [dispatch]
+    [dispatch, token],
   );
 
   // Delete a document
@@ -70,7 +74,7 @@ export const useRider = () => {
     async (documentId: string) => {
       setDeletingDocument(true);
       try {
-        await riderService.deleteDocument(documentId);
+        await riderService.deleteDocument(documentId, token);
         // Refresh rider data to get updated documents
         await dispatch(fetchRiderMe());
       } catch (error) {
@@ -80,7 +84,7 @@ export const useRider = () => {
         setDeletingDocument(false);
       }
     },
-    [dispatch]
+    [dispatch, token],
   );
 
   // Get document status
@@ -98,7 +102,7 @@ export const useRider = () => {
 
   useEffect(() => {
     fetchRider();
-  }, [fetchRider]);
+  }, [fetchRider, token]);
 
   return {
     // State

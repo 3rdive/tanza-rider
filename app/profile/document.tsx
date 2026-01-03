@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,16 +11,20 @@ import {
   ActivityIndicator,
   ScrollView,
   Linking,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { storageService } from "@/lib/api";
 import { useRider } from "@/hooks/rider.hook";
+import { useVehicleTypes } from "@/hooks/useVehicleTypes";
 import type { IRequiredDocument, IDocumentUpload } from "@/lib/api";
 import { useTheme } from "@/context/ThemeContext";
 import { router } from "expo-router";
+import { useToast } from "@/hooks/useToast";
 
 interface DocumentData {
   docName: string;
@@ -34,6 +38,9 @@ interface DocumentData {
 
 export default function DocumentVerification() {
   const { colors } = useTheme();
+  const { width: screenWidth } = useWindowDimensions();
+  const isSmallScreen = screenWidth < 380;
+
   const {
     rider,
     documentStatus,
@@ -48,8 +55,10 @@ export default function DocumentVerification() {
     documents: existingDocuments,
   } = useRider();
 
+  const { vehicleTypes, loading: loadingVehicleTypes } = useVehicleTypes();
+
   const [vehicleType, setVehicleType] = useState(rider?.vehicleType || "bike");
-  const [uploading, setUploading] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
   const [requiredDocs, setRequiredDocs] = useState<IRequiredDocument[]>([]);
   const [documentData, setDocumentData] = useState<
     Record<string, DocumentData>
@@ -57,7 +66,8 @@ export default function DocumentVerification() {
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState<string | null>(null);
   const [tempDate, setTempDate] = useState<Date>(new Date());
-  const initializedRef = useRef(false);
+
+  const toast = useToast();
 
   // Normalize status for display
   const status = documentStatus.toUpperCase() as
@@ -78,127 +88,145 @@ export default function DocumentVerification() {
   // Fetch required documents when vehicle type changes
   useEffect(() => {
     const loadRequiredDocs = async () => {
+      if (!vehicleType) return;
+
       try {
         const docs = await getRequiredDocuments(vehicleType);
         setRequiredDocs(docs);
       } catch (error) {
         console.error("Error loading required documents:", error);
-        Alert.alert("Error", "Failed to load required documents");
+        toast.error("Error", "Failed to load required documents");
       }
     };
 
-    if (vehicleType) {
-      loadRequiredDocs();
-    }
+    loadRequiredDocs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vehicleType]);
 
   // Populate document data from existing documents and required documents
   useEffect(() => {
-    if (requiredDocs.length > 0 && !initializedRef.current) {
-      const newDocData: Record<string, DocumentData> = {};
+    // Clear previous documents when a vehicle type has no required documents
+    if (requiredDocs.length === 0) {
+      setDocumentData((prev) => (Object.keys(prev).length > 0 ? {} : prev));
+      return;
+    }
+
+    setDocumentData((prev) => {
+      const next = { ...prev };
+      let hasChanges = false;
+
+      // Remove documents that are no longer required
+      Object.keys(next).forEach((key) => {
+        if (!requiredDocs.find((d) => d.docName === key)) {
+          delete next[key];
+          hasChanges = true;
+        }
+      });
 
       requiredDocs.forEach((reqDoc) => {
         // Find if this document already exists in rider's documents
         const existingDoc = existingDocuments?.find(
-          (d) => d.docName === reqDoc.docName
+          (d) => d.docName === reqDoc.docName,
         );
 
-        newDocData[reqDoc.docName] = {
-          docName: reqDoc.docName,
-          docUrl: existingDoc?.docUrl || "",
-          expirationDate: existingDoc?.expirationDate || undefined,
-          requiresExpiration: reqDoc.requiresExpiration,
-          documentId: existingDoc?.id,
-          documentStatus: existingDoc?.documentStatus,
-          rejectionReason: existingDoc?.rejectionReason,
-        };
+        const prevDoc = prev[reqDoc.docName];
+
+        if (!prevDoc) {
+          // New document data
+          next[reqDoc.docName] = {
+            docName: reqDoc.docName,
+            docUrl: existingDoc?.docUrl || "",
+            expirationDate: existingDoc?.expirationDate || undefined,
+            requiresExpiration: reqDoc.requiresExpiration,
+            documentId: existingDoc?.id,
+            documentStatus: existingDoc?.documentStatus,
+            rejectionReason: existingDoc?.rejectionReason,
+          };
+          hasChanges = true;
+        } else {
+          // Update existing document data if server status changed
+          // We preserve local edits (docUrl, expirationDate) by spreading prevDoc
+          const statusChanged =
+            prevDoc.documentStatus !== existingDoc?.documentStatus ||
+            prevDoc.rejectionReason !== existingDoc?.rejectionReason ||
+            prevDoc.documentId !== existingDoc?.id;
+
+          if (statusChanged) {
+            next[reqDoc.docName] = {
+              ...prevDoc,
+              documentId: existingDoc?.id,
+              documentStatus: existingDoc?.documentStatus,
+              rejectionReason: existingDoc?.rejectionReason,
+            };
+            hasChanges = true;
+          }
+        }
       });
 
-      setDocumentData(newDocData);
-      initializedRef.current = true;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requiredDocs]);
+      return hasChanges ? next : prev;
+    });
+  }, [requiredDocs, existingDocuments]);
 
-  // Update vehicle type in rider data
+  // Initialize vehicle type from rider data or defaults
   useEffect(() => {
-    if (rider?.vehicleType && rider.vehicleType !== vehicleType) {
-      setVehicleType(rider.vehicleType);
+    if (rider?.vehicleType) {
+      if (rider.vehicleType !== vehicleType) {
+        setVehicleType(rider.vehicleType);
+      }
+    } else if (vehicleTypes.length > 0) {
+      // Default to first active vehicle type if "bike" is not in the list
+      const bikeType = vehicleTypes.find((type) => type.name === "bike");
+      const defaultType = bikeType ? "bike" : vehicleTypes[0].name;
+
+      if (vehicleType !== defaultType) {
+        setVehicleType(defaultType);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rider]);
+  }, [rider, vehicleTypes]);
 
   const pickImage = async (docName: string) => {
     if (!isEditable) {
-      Alert.alert(
+      toast.info(
         "Not Editable",
-        "Documents cannot be modified when status is not INITIAL or REJECTED."
+        "Documents cannot be modified when status is not INITIAL or REJECTED.",
       );
       return;
     }
 
     try {
-      // On web, permissions are not required the same way; skip checks there
-      if (Platform.OS !== "web") {
-        // Check current permission status first to avoid unnecessary prompts
-        const currentPerm = await ImagePicker.getMediaLibraryPermissionsAsync();
-        const currentGranted =
-          typeof (currentPerm as any)?.granted === "boolean"
-            ? (currentPerm as any).granted
-            : (currentPerm as any)?.status === "granted";
-
-        if (!currentGranted) {
-          // Request permission
-          const req = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          const granted =
-            typeof (req as any)?.granted === "boolean"
-              ? (req as any).granted
-              : (req as any)?.status === "granted";
-
-          if (!granted) {
-            Alert.alert(
-              "Permission Required",
-              "Please grant access to your photo library in your device settings to upload documents. Go to Settings > Tanza Go > Photos and enable access.",
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Open Settings",
-                  onPress: () => {
-                    if (Platform.OS === "ios") {
-                      Linking.openURL("app-settings:");
-                    } else {
-                      Linking.openSettings();
-                    }
-                  },
-                },
-              ]
-            );
-            return;
-          }
-        }
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.7,
+      // Use DocumentPicker to open file picker instead of image gallery
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["image/*", "application/pdf"],
+        copyToCacheDirectory: true,
       });
 
-      // Support both new and old result shapes and cancellation flags
-      const wasCancelled =
-        (result as any).canceled ?? (result as any).cancelled ?? false;
-      if (wasCancelled) return;
+      // Check if user cancelled
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
 
-      const uri = (result as any).assets?.[0]?.uri ?? (result as any).uri;
+      const file = result.assets[0];
+      const uri = file.uri;
       if (!uri) return;
 
+      // Validate file size (optional: 10MB limit)
+      if (file.size && file.size > 10 * 1024 * 1024) {
+        toast.error("File Too Large", "Please select a file smaller than 10MB");
+        return;
+      }
+
       // Upload to server
-      setUploading(true);
+      setUploadingDoc(docName);
       try {
+        // Determine file type from mimeType or name
+        const mimeType = file.mimeType || "image/jpeg";
+        const fileName = file.name || `${docName}-${Date.now()}.jpg`;
+
         const uploadRes = await storageService.upload({
           uri,
-          name: `${docName}-${Date.now()}.jpg`,
-          type: "image/jpeg",
+          name: fileName,
+          type: mimeType,
         });
         const uploadedUrl =
           uploadRes.data?.url ?? (uploadRes as any)?.data?.url;
@@ -217,24 +245,24 @@ export default function DocumentVerification() {
           };
         });
 
-        Alert.alert("Uploaded", `${docName} uploaded successfully.`);
+        toast.success("Uploaded", `${docName} uploaded successfully.`);
       } catch (err) {
         console.error("Upload error:", err);
-        Alert.alert("Upload Failed", "Could not upload the image.");
+        toast.error("Upload Failed", "Could not upload the image.");
       } finally {
-        setUploading(false);
+        setUploadingDoc(null);
       }
     } catch (err) {
       console.warn(err);
-      Alert.alert("Error", "Could not pick the image.");
+      toast.error("Error", "Could not pick the image.");
     }
   };
 
   const openCamera = async (docName: string) => {
     if (!isEditable) {
-      Alert.alert(
+      toast.info(
         "Not Editable",
-        "Documents cannot be modified when status is not INITIAL or REJECTED."
+        "Documents cannot be modified when status is not INITIAL or REJECTED.",
       );
       return;
     }
@@ -272,7 +300,7 @@ export default function DocumentVerification() {
                     }
                   },
                 },
-              ]
+              ],
             );
             return;
           }
@@ -289,7 +317,7 @@ export default function DocumentVerification() {
       const uri = (result as any).assets?.[0]?.uri ?? (result as any).uri;
       if (!uri) return;
 
-      setUploading(true);
+      setUploadingDoc(docName);
       try {
         const uploadRes = await storageService.upload({
           uri,
@@ -313,25 +341,25 @@ export default function DocumentVerification() {
           };
         });
 
-        Alert.alert("Uploaded", `${docName} uploaded successfully.`);
+        toast.success("Uploaded", `${docName} uploaded successfully.`);
       } catch (err) {
         console.error("Upload error:", err);
-        Alert.alert("Upload Failed", "Could not upload the image.");
+        toast.error("Upload Failed", "Could not upload the image.");
       } finally {
-        setUploading(false);
+        setUploadingDoc(null);
       }
     } catch (err) {
       console.warn(err);
-      Alert.alert("Error", "Could not open the camera.");
+      toast.error("Error", "Could not open the camera.");
     }
   };
 
   const handleVehicleTypeChange = async (newVehicleType: string) => {
     // Only allow vehicle type change when documentStatus is INITIAL
     if (documentStatus !== "INITIAL" && documentStatus !== "") {
-      Alert.alert(
+      toast.info(
         "Not Allowed",
-        "Vehicle type can only be changed when documents have not been submitted yet."
+        "Vehicle type can only be changed when documents have not been submitted yet.",
       );
       return;
     }
@@ -343,7 +371,7 @@ export default function DocumentVerification() {
       await updateRider({ vehicleType: newVehicleType }).unwrap();
     } catch (err: any) {
       console.error("Error updating vehicle type:", err);
-      Alert.alert("Error", "Failed to update vehicle type");
+      toast.error("Error", "Failed to update vehicle type");
     }
   };
 
@@ -351,10 +379,15 @@ export default function DocumentVerification() {
     const ensureDefaultVehicle = async () => {
       if (
         !rider?.vehicleType &&
-        (documentStatus === "INITIAL" || documentStatus === "")
+        (documentStatus === "INITIAL" || documentStatus === "") &&
+        vehicleTypes.length > 0
       ) {
         try {
-          await updateRider({ vehicleType: "bike" }).unwrap();
+          // Use "bike" if available, otherwise use first vehicle type
+          const defaultType = vehicleTypes.find((type) => type.name === "bike")
+            ? "bike"
+            : vehicleTypes[0].name;
+          await updateRider({ vehicleType: defaultType }).unwrap();
         } catch (error) {
           console.error("Error setting default vehicle type:", error);
         }
@@ -363,7 +396,7 @@ export default function DocumentVerification() {
 
     ensureDefaultVehicle();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [vehicleTypes]);
 
   const formatDateToYYYYMMDD = (date: Date): string => {
     const year = date.getFullYear();
@@ -375,7 +408,7 @@ export default function DocumentVerification() {
   const handleDateChange = (
     docName: string,
     event: any,
-    selectedDate?: Date
+    selectedDate?: Date,
   ) => {
     if (Platform.OS === "android") {
       setShowDatePicker(null);
@@ -428,9 +461,9 @@ export default function DocumentVerification() {
     });
 
     if (missingDocs.length > 0) {
-      Alert.alert(
+      toast.error(
         "Missing Documents",
-        `Please upload: ${missingDocs.map((d) => d.docName).join(", ")}`
+        `Please upload: ${missingDocs.map((d) => d.docName).join(", ")}`,
       );
       return;
     }
@@ -442,11 +475,11 @@ export default function DocumentVerification() {
     });
 
     if (invalidExpirations.length > 0) {
-      Alert.alert(
+      toast.error(
         "Missing Expiration Dates",
         `Please provide expiration dates for: ${invalidExpirations
           .map((d) => d.docName)
-          .join(", ")}`
+          .join(", ")}`,
       );
       return;
     }
@@ -454,7 +487,7 @@ export default function DocumentVerification() {
     try {
       // Build documents array
       const documentsToUpload: IDocumentUpload[] = Object.values(
-        documentData
+        documentData,
       ).map((doc) => ({
         docName: doc.docName,
         docUrl: doc.docUrl,
@@ -477,28 +510,39 @@ export default function DocumentVerification() {
         "Submission Failed",
         err?.response?.data?.message ||
           err?.message ||
-          "Could not submit documents."
+          "Could not submit documents.",
       );
     }
   };
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.surface },
-    title: { fontSize: 18, fontWeight: "700", padding: 16, color: colors.text },
+    title: {
+      fontSize: isSmallScreen ? 16 : 18,
+      fontWeight: "700",
+      padding: isSmallScreen ? 12 : 16,
+      color: colors.text,
+      flex: 1,
+    },
     statusBox: {
-      padding: 16,
+      padding: isSmallScreen ? 12 : 16,
       borderTopWidth: 1,
       borderBottomWidth: 1,
       borderColor: colors.border,
     },
-    statusLabel: { color: colors.textSecondary, marginBottom: 8 },
-    statusRow: { flexDirection: "row", alignItems: "center" },
+    statusLabel: {
+      color: colors.textSecondary,
+      marginBottom: 8,
+      fontSize: isSmallScreen ? 13 : 14,
+    },
+    statusRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap" },
     statusPill: {
       paddingVertical: 6,
-      paddingHorizontal: 12,
+      paddingHorizontal: isSmallScreen ? 10 : 12,
       borderRadius: 16,
       color: "#fff",
       fontWeight: "600",
+      fontSize: isSmallScreen ? 13 : 14,
     },
     miniStatusPill: {
       paddingVertical: 2,
@@ -515,26 +559,44 @@ export default function DocumentVerification() {
     rejected: { backgroundColor: "#d32f2f" },
     note: { marginTop: 10, color: colors.textSecondary },
 
-    section: { padding: 16 },
-    label: { color: colors.text, marginBottom: 8, fontWeight: "600" },
-    dropdownRow: { flexDirection: "row", gap: 8 },
+    section: { padding: isSmallScreen ? 12 : 16 },
+    label: {
+      color: colors.text,
+      marginBottom: 8,
+      fontWeight: "600",
+      fontSize: isSmallScreen ? 14 : 15,
+    },
+    dropdownRow: {
+      flexDirection: "row",
+      gap: isSmallScreen ? 6 : 8,
+      flexWrap: "wrap",
+    },
     typeBtn: {
-      paddingVertical: 10,
-      paddingHorizontal: 14,
+      paddingVertical: isSmallScreen ? 8 : 10,
+      paddingHorizontal: isSmallScreen ? 12 : 14,
       borderRadius: 8,
       backgroundColor: colors.background,
     },
     typeBtnActive: { backgroundColor: colors.primary },
-    typeText: { color: colors.text },
-    typeTextActive: { color: colors.surface, fontWeight: "700" },
+    typeText: { color: colors.text, fontSize: isSmallScreen ? 13 : 14 },
+    typeTextActive: {
+      color: colors.surface,
+      fontWeight: "700",
+      fontSize: isSmallScreen ? 13 : 14,
+    },
 
     docRow: {
-      flexDirection: "row",
-      alignItems: "center",
+      flexDirection: isSmallScreen ? "column" : "row",
+      alignItems: isSmallScreen ? "stretch" : "center",
       justifyContent: "space-between",
-      marginBottom: 12,
+      marginBottom: 16,
+      gap: isSmallScreen ? 12 : 0,
     },
-    docLabel: { fontWeight: "600", color: colors.text },
+    docLabel: {
+      fontWeight: "600",
+      color: colors.text,
+      fontSize: isSmallScreen ? 14 : 15,
+    },
     docSub: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
     rejectionText: {
       color: "#d32f2f",
@@ -552,18 +614,20 @@ export default function DocumentVerification() {
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: 8,
-      paddingVertical: 8,
-      paddingHorizontal: 10,
-      fontSize: 14,
+      paddingVertical: isSmallScreen ? 10 : 12,
+      paddingHorizontal: isSmallScreen ? 12 : 14,
+      fontSize: isSmallScreen ? 14 : 15,
       color: colors.text,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
       backgroundColor: colors.surface,
+      minHeight: 44, // Minimum touch target
     },
     datePickerText: {
-      fontSize: 14,
+      fontSize: isSmallScreen ? 14 : 15,
       color: colors.text,
+      flex: 1,
     },
     datePickerModalBg: {
       flex: 1,
@@ -572,52 +636,69 @@ export default function DocumentVerification() {
     },
     datePickerContainer: {
       backgroundColor: colors.surface,
-      borderTopLeftRadius: 12,
-      borderTopRightRadius: 12,
-      paddingBottom: 20,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      paddingBottom: Platform.OS === "ios" ? 20 : 16,
+      maxHeight: "50%",
     },
     datePickerHeader: {
       flexDirection: "row",
       justifyContent: "space-between",
-      paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingHorizontal: isSmallScreen ? 12 : 16,
+      paddingVertical: isSmallScreen ? 10 : 12,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
     datePickerCancel: {
-      fontSize: 16,
+      fontSize: isSmallScreen ? 15 : 16,
       color: colors.textSecondary,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
     },
     datePickerDone: {
-      fontSize: 16,
+      fontSize: isSmallScreen ? 15 : 16,
       color: colors.primary,
       fontWeight: "600",
+      paddingHorizontal: 8,
+      paddingVertical: 4,
     },
     iconBtn: {
-      width: 36,
-      height: 36,
+      width: isSmallScreen ? 44 : 40,
+      height: isSmallScreen ? 44 : 40,
       borderRadius: 8,
       backgroundColor: colors.background,
       alignItems: "center",
       justifyContent: "center",
-      marginRight: 8,
+      marginRight: isSmallScreen ? 0 : 8,
     },
     secondaryBtn: {
-      paddingHorizontal: 10,
-      paddingVertical: 8,
+      paddingHorizontal: isSmallScreen ? 14 : 12,
+      paddingVertical: isSmallScreen ? 10 : 9,
       backgroundColor: colors.background,
       borderRadius: 8,
-      marginRight: 6,
+      marginRight: isSmallScreen ? 0 : 6,
+      minHeight: 44, // Minimum touch target
+      justifyContent: "center",
+      alignItems: "center",
+      flex: isSmallScreen ? 1 : 0,
     },
-    secondaryText: { color: colors.text },
+    secondaryText: {
+      color: colors.text,
+      fontSize: isSmallScreen ? 13 : 14,
+    },
 
     primaryBtn: {
       backgroundColor: colors.primary,
-      paddingVertical: 12,
+      paddingVertical: isSmallScreen ? 14 : 12,
       borderRadius: 10,
       alignItems: "center",
+      minHeight: 48, // Good touch target
     },
-    primaryText: { color: colors.surface, fontWeight: "700" },
+    primaryText: {
+      color: colors.surface,
+      fontWeight: "700",
+      fontSize: isSmallScreen ? 15 : 16,
+    },
 
     modalBg: {
       flex: 1,
@@ -626,8 +707,8 @@ export default function DocumentVerification() {
       alignItems: "center",
     },
     modalContent: {
-      width: "92%",
-      height: "78%",
+      width: isSmallScreen ? "95%" : "92%",
+      height: isSmallScreen ? "85%" : "78%",
       backgroundColor: colors.surface,
       borderRadius: 12,
       padding: 12,
@@ -638,7 +719,7 @@ export default function DocumentVerification() {
       marginTop: 12,
       backgroundColor: colors.tabBackground,
       borderRadius: 8,
-      padding: 10,
+      padding: isSmallScreen ? 12 : 10,
       flexDirection: "row",
       alignItems: "center",
       gap: 10,
@@ -656,14 +737,14 @@ export default function DocumentVerification() {
       color: "#a94400",
       fontWeight: "900",
       textTransform: "uppercase",
-      fontSize: 12,
+      fontSize: isSmallScreen ? 11 : 12,
     },
     headerRow: {
       flexDirection: "row",
       alignItems: "center",
-      paddingHorizontal: 12,
+      paddingHorizontal: isSmallScreen ? 8 : 12,
     },
-    backBtn: { padding: 6, marginRight: 8 },
+    backBtn: { padding: 6, marginRight: isSmallScreen ? 4 : 8 },
   });
 
   const renderDocRow = (docData: DocumentData) => {
@@ -675,6 +756,7 @@ export default function DocumentVerification() {
       rejectionReason: docRejectionReason,
     } = docData;
     const isUploaded = !!docUrl;
+    const isUploadingThis = uploadingDoc === docName;
 
     return (
       <View style={styles.docRow} key={docName}>
@@ -698,7 +780,11 @@ export default function DocumentVerification() {
             )}
           </View>
           <Text style={styles.docSub}>
-            {isUploaded ? "Uploaded" : "Not uploaded"}
+            {isUploadingThis
+              ? "Uploading..."
+              : isUploaded
+                ? "Uploaded"
+                : "Not uploaded"}
           </Text>
           {docRejectionReason && (
             <Text style={styles.rejectionText}>
@@ -735,52 +821,121 @@ export default function DocumentVerification() {
           )}
         </View>
 
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={() =>
-              isUploaded ? setPreviewUri(docUrl) : pickImage(docName)
-            }
-            disabled={!isEditable && !isUploaded}
-          >
-            <Ionicons
-              name={isUploaded ? "eye" : "cloud-upload"}
-              size={20}
-              color={
-                isEditable || isUploaded ? colors.primary : colors.textSecondary
+        <View
+          style={{
+            flexDirection: "row",
+            gap: isSmallScreen ? 8 : 8,
+            flexWrap: isSmallScreen ? "wrap" : "nowrap",
+          }}
+        >
+          {!isSmallScreen && (
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() =>
+                isUploaded ? setPreviewUri(docUrl) : pickImage(docName)
               }
-            />
-          </TouchableOpacity>
+              disabled={(!isEditable && !isUploaded) || isUploadingThis}
+            >
+              {isUploadingThis ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Ionicons
+                  name={isUploaded ? "eye" : "cloud-upload"}
+                  size={20}
+                  color={
+                    isEditable || isUploaded
+                      ? colors.primary
+                      : colors.textSecondary
+                  }
+                />
+              )}
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={[
               styles.secondaryBtn,
-              !isEditable && { backgroundColor: colors.border },
+              (!isEditable || isUploadingThis) && {
+                backgroundColor: colors.border,
+              },
             ]}
             onPress={() => pickImage(docName)}
-            disabled={!isEditable}
+            disabled={!isEditable || isUploadingThis}
           >
-            <Text
-              style={[styles.secondaryText, !isEditable && { color: "#999" }]}
-            >
-              {isUploaded ? "Replace" : "Upload"}
-            </Text>
+            {isUploadingThis ? (
+              <ActivityIndicator size="small" color={colors.textSecondary} />
+            ) : (
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
+                {isSmallScreen && (
+                  <Ionicons
+                    name="cloud-upload-outline"
+                    size={18}
+                    color={isEditable ? colors.text : "#999"}
+                  />
+                )}
+                <Text
+                  style={[
+                    styles.secondaryText,
+                    !isEditable && { color: "#999" },
+                  ]}
+                >
+                  {isUploaded ? "Replace" : "Upload"}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.secondaryBtn,
-              !isEditable && { backgroundColor: colors.border },
+              (!isEditable || isUploadingThis) && {
+                backgroundColor: colors.border,
+              },
             ]}
             onPress={() => openCamera(docName)}
-            disabled={!isEditable}
+            disabled={!isEditable || isUploadingThis}
           >
-            <Text
-              style={[styles.secondaryText, !isEditable && { color: "#999" }]}
-            >
-              Camera
-            </Text>
+            {isUploadingThis ? (
+              <ActivityIndicator size="small" color={colors.textSecondary} />
+            ) : (
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
+                {isSmallScreen && (
+                  <Ionicons
+                    name="camera-outline"
+                    size={18}
+                    color={isEditable ? colors.text : "#999"}
+                  />
+                )}
+                <Text
+                  style={[
+                    styles.secondaryText,
+                    !isEditable && { color: "#999" },
+                  ]}
+                >
+                  {isUploaded ? "Replace" : "Camera"}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
+
+          {isSmallScreen && isUploaded && (
+            <TouchableOpacity
+              style={styles.secondaryBtn}
+              onPress={() => setPreviewUri(docUrl)}
+              disabled={!isUploaded}
+            >
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
+                <Ionicons name="eye-outline" size={18} color={colors.text} />
+                <Text style={styles.secondaryText}>View</Text>
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );
@@ -808,8 +963,8 @@ export default function DocumentVerification() {
                 status === "APPROVED"
                   ? styles.approved
                   : status === "REJECTED"
-                  ? styles.rejected
-                  : styles.pending,
+                    ? styles.rejected
+                    : styles.pending,
               ]}
             >
               {status}
@@ -848,77 +1003,40 @@ export default function DocumentVerification() {
 
         <View style={styles.section}>
           <Text style={styles.label}>Vehicle Type</Text>
-          <View style={styles.dropdownRow}>
-            <TouchableOpacity
-              style={[
-                styles.typeBtn,
-                vehicleType === "bike" && styles.typeBtnActive,
-                documentStatus !== "INITIAL" &&
-                  documentStatus !== "" && { opacity: 0.5 },
-              ]}
-              onPress={() =>
-                (documentStatus === "INITIAL" || documentStatus === "") &&
-                handleVehicleTypeChange("bike")
-              }
-              disabled={documentStatus !== "INITIAL" && documentStatus !== ""}
-            >
-              <Text
-                style={
-                  vehicleType === "bike"
-                    ? styles.typeTextActive
-                    : styles.typeText
-                }
-              >
-                Bike
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.typeBtn,
-                vehicleType === "bicycle" && styles.typeBtnActive,
-                documentStatus !== "INITIAL" &&
-                  documentStatus !== "" && { opacity: 0.5 },
-              ]}
-              onPress={() =>
-                (documentStatus === "INITIAL" || documentStatus === "") &&
-                handleVehicleTypeChange("bicycle")
-              }
-              disabled={documentStatus !== "INITIAL" && documentStatus !== ""}
-            >
-              <Text
-                style={
-                  vehicleType === "bicycle"
-                    ? styles.typeTextActive
-                    : styles.typeText
-                }
-              >
-                Bicycle
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.typeBtn,
-                vehicleType === "van" && styles.typeBtnActive,
-                documentStatus !== "INITIAL" &&
-                  documentStatus !== "" && { opacity: 0.5 },
-              ]}
-              onPress={() =>
-                (documentStatus === "INITIAL" || documentStatus === "") &&
-                handleVehicleTypeChange("van")
-              }
-              disabled={documentStatus !== "INITIAL" && documentStatus !== ""}
-            >
-              <Text
-                style={
-                  vehicleType === "van"
-                    ? styles.typeTextActive
-                    : styles.typeText
-                }
-              >
-                Van
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {loadingVehicleTypes ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <View style={styles.dropdownRow}>
+              {vehicleTypes.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.typeBtn,
+                    vehicleType === type.name && styles.typeBtnActive,
+                    documentStatus !== "INITIAL" &&
+                      documentStatus !== "" && { opacity: 0.5 },
+                  ]}
+                  onPress={() =>
+                    (documentStatus === "INITIAL" || documentStatus === "") &&
+                    handleVehicleTypeChange(type.name)
+                  }
+                  disabled={
+                    documentStatus !== "INITIAL" && documentStatus !== ""
+                  }
+                >
+                  <Text
+                    style={
+                      vehicleType === type.name
+                        ? styles.typeTextActive
+                        : styles.typeText
+                    }
+                  >
+                    {type.name.charAt(0).toUpperCase() + type.name.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -929,20 +1047,23 @@ export default function DocumentVerification() {
           )}
         </View>
 
-        <View style={{ padding: 16 }}>
+        <View style={{ padding: isSmallScreen ? 12 : 16 }}>
           <TouchableOpacity
             style={[
               styles.primaryBtn,
-              (!isEditable || uploading || updating || uploadingDocuments) && {
+              (!isEditable ||
+                uploadingDoc ||
+                updating ||
+                uploadingDocuments) && {
                 opacity: 0.5,
               },
             ]}
             onPress={handleSubmitDocuments}
             disabled={
-              !isEditable || uploading || updating || uploadingDocuments
+              !isEditable || !!uploadingDoc || updating || uploadingDocuments
             }
           >
-            {uploading || updating || uploadingDocuments ? (
+            {uploadingDoc || updating || uploadingDocuments ? (
               <ActivityIndicator color={colors.surface} />
             ) : (
               <Text style={styles.primaryText}>Submit Documents</Text>

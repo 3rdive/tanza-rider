@@ -11,6 +11,8 @@ export interface DeliveryRequest {
   timeAgo: string;
   isUrgent: boolean;
   hasMultipleDeliveries?: boolean;
+  isCashPayment?: boolean;
+  cashAmountToReceive?: number;
   deliveryDestinations?: {
     id: string;
     dropOffLocation: {

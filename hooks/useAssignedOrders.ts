@@ -2,9 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { orderService, IAssignedOrder } from "@/lib/api";
 import { createSocket } from "@/lib/socket";
 import { Socket } from "socket.io-client";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useUser } from "../redux/hooks/hooks";
-import { Alert } from "react-native";
 
 export const useAssignedOrders = () => {
   const { user, access_token } = useUser();

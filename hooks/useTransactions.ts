@@ -30,6 +30,9 @@ export const useTransactions = () => {
     else if (t.type === "DEPOSIT") type = "deposit";
     else if (t.type === "ORDER_REWARD") type = "reward";
     else if (t.type === "WITHDRAWAL") type = "withdrawal";
+    else if (t.type === "FAILED_PAYOUT") type = "failed payout";
+    else if (t.type === "SERVICE_CHARGE") type = "charge";
+    else if (t.type === "SERVICE_CHARGE") type = "refund";
 
     let status: Transaction["status"] = "complete";
     if (t.status?.toLowerCase() === "complete") status = "complete";
